@@ -10,7 +10,7 @@ const COUNTRIES: Record<string, string> = {
   FR:'🇫🇷 法國', DE:'🇩🇪 德國', OTHER:'🌍 其他'
 };
 
-const SCRIPT_GEN_URL = 'https://your-script-generator.vercel.app';
+const SCRIPT_GEN_URL = 'https://script-generator-xi.vercel.app';
 const STORAGE_KEY = 'soon_ideas_v2';
 
 function loadIdeas() {
@@ -383,7 +383,7 @@ export default function Home() {
                 {filtered.map(idea => {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
-                  const scriptUrl = `${SCRIPT_GEN_URL}?idea=${encodeURIComponent(idea.title || '')}&hook=${encodeURIComponent(idea.scriptHook || '')}`;
+                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(idea.summary || '')}&hook=${encodeURIComponent(idea.scriptHook || '')}&industry=${encodeURIComponent(idea.tags?.[0] || '')}`;
                   return (
                     <div key={idea.id} className="card">
                       <div className="card-head">
