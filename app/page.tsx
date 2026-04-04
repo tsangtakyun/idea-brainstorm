@@ -101,6 +101,7 @@ export default function Home() {
   const [placeLat, setPlaceLat] = useState<number | null>(null);
   const [placeLng, setPlaceLng] = useState<number | null>(null);
   const [showWorldMap, setShowWorldMap] = useState(false);
+  const [editingBg, setEditingBg] = useState<Record<string, string>>({});
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -517,7 +518,7 @@ export default function Home() {
                 {filtered.map(idea => {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
-                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(idea.summary || '')}`;
+                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(editingBg[idea.id] !== undefined ? editingBg[idea.id] : (idea.summary || ''))}`;
                   return (
                     <div key={idea.id} className="card">
                       <div className="card-head">
@@ -551,6 +552,17 @@ export default function Home() {
                       )}
                       {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
                       {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
+                      <div style={{marginTop:4}}>
+                        <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)',marginBottom:4}}>Background</div>
+                        <textarea
+                          className="field"
+                          rows={3}
+                          style={{fontSize:11,lineHeight:1.5,resize:'vertical'}}
+                          value={editingBg[idea.id] !== undefined ? editingBg[idea.id] : (idea.summary || '')}
+                          onChange={e => setEditingBg(prev => ({...prev, [idea.id]: e.target.value}))}
+                          placeholder="編輯背景資料再生成 Script..."
+                        />
+                      </div>
                       {idea.lat && idea.lng && (
                         <div style={{borderRadius:"var(--radius)",overflow:"hidden",border:"1px solid var(--border)"}}>
                           <iframe
