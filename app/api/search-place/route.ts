@@ -1,12 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-function stripCiteTags(text: string): string {
-  return text.replace(/<cite[^>]*>[\s\S]*?<\/cite>/g, (match) => {
-    return match.replace(/<cite[^>]*>|<\/cite>/g, '')
-  }).replace(/<\/?cite[^>]*>/g, '').trim()
+function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '').trim()
 }
 
 export async function POST(req: NextRequest) {
@@ -14,31 +9,44 @@ export async function POST(req: NextRequest) {
     const { name, address } = await req.json()
     if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 })
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any,
-      messages: [{
-        role: 'user',
-        content: `搜尋「${name}」${address ? `（地址：${address}）` : ''}嘅資料，然後用繁體中文廣東話寫一段2-3句嘅背景介紹，包括：店鋪特色、主打產品／服務、受歡迎程度、任何有趣嘅賣點。
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tools: [{ google_search: {} }],
+          contents: [{
+            role: 'user',
+            parts: [{
+              text: `搜尋「${name}」${address ? `（地址：${address}）` : ''}嘅資料，然後用繁體中文廣東話寫一段2-3句嘅背景介紹，包括：店鋪特色、主打產品／服務、受歡迎程度、任何有趣嘅賣點。
 
-重要：只返回純 JSON 格式，desc 字段入面唔好有任何 HTML tags 或 citation markup：
+只返回純 JSON 格式，唔好有任何其他文字：
 {
   "desc": "背景介紹純文字..."
 }`
-      }]
-    })
+            }]
+          }]
+        })
+      }
+    )
 
-    const text = response.content
-      .filter((b: any) => b.type === 'text')
-      .map((b: any) => b.text)
-      .join('')
+    if (!response.ok) {
+      const err = await response.json()
+      throw new Error(err.error?.message || 'Gemini API error')
+    }
+
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts
+      ?.filter((p: any) => p.text)
+      ?.map((p: any) => p.text)
+      ?.join('') || ''
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('Cannot parse response')
 
     const parsed = JSON.parse(jsonMatch[0])
-    const cleanDesc = stripCiteTags(parsed.desc || '')
+    const cleanDesc = stripHtmlTags(parsed.desc || '')
 
     return NextResponse.json({ desc: cleanDesc })
   } catch (err: any) {
