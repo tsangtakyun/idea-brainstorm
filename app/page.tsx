@@ -104,6 +104,7 @@ export default function Home() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -568,22 +569,25 @@ export default function Home() {
                       )}
                       {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
                       {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
-                      <div style={{marginTop:4}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                          <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
-                          {savingNote === idea.id && <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span>}
-                          {savingNote !== idea.id && notes[idea.id] !== undefined && <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span>}
+                      {expandedNotes[idea.id] && (
+                        <div style={{marginTop:4}}>
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                            <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
+                            {savingNote === idea.id && <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span>}
+                            {savingNote !== idea.id && notes[idea.id] !== undefined && <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span>}
+                          </div>
+                          <textarea
+                            className="field"
+                            rows={4}
+                            style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
+                            value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
+                            onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
+                            onBlur={e => saveNote(idea.id, e.target.value)}
+                            placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
+                            autoFocus
+                          />
                         </div>
-                        <textarea
-                          className="field"
-                          rows={4}
-                          style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
-                          value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
-                          onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
-                          onBlur={e => saveNote(idea.id, e.target.value)}
-                          placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
-                        />
-                      </div>
+                      )}
                       {idea.lat && idea.lng && (
                         <div style={{borderRadius:"var(--radius)",overflow:"hidden",border:"1px solid var(--border)"}}>
                           <iframe
