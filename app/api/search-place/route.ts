@@ -9,6 +9,21 @@ function stripCiteTags(text: string): string {
     .trim()
 }
 
+async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (data.status === 'OK' && data.results[0]) {
+      const { lat, lng } = data.results[0].geometry.location
+      return { lat, lng }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { name, address } = await req.json()
@@ -35,7 +50,14 @@ export async function POST(req: NextRequest) {
     const parsed = JSON.parse(jsonMatch[0])
     const cleanDesc = stripCiteTags(parsed.desc || '')
 
-    return NextResponse.json({ desc: cleanDesc })
+    const geoQuery = address ? `${name} ${address}` : name
+    const coords = await geocode(geoQuery)
+
+    return NextResponse.json({
+      desc: cleanDesc,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
