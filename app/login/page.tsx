@@ -31,8 +31,11 @@ function LoginContent() {
           SOON · AI Media Content Creation
         </p>
         <h1 style={{ fontSize: '32px', fontWeight: '400', color: '#1a1a1a', marginBottom: '48px' }}>
-          BBO 內部系統
+          SOON 內部系統
         </h1>
+        <p style={{ fontSize: '14px', color: '#888', marginBottom: '40px', fontStyle: 'italic' }}>
+          人人都可以成為 Content Creator
+        </p>
 
         {error === 'unauthorized' && (
           <p style={{ color: '#c0392b', marginBottom: '24px', fontSize: '14px' }}>
