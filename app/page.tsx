@@ -103,6 +103,7 @@ export default function Home() {
   const [showWorldMap, setShowWorldMap] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -317,7 +318,12 @@ export default function Home() {
           <span className="brand-label">AI Media Content Creation</span>
           <h1 className="page-title">Idea Collection <em>/ Beta</em></h1>
         </div>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={()=>setShowNotesPanel(true)} style={{fontSize:11,padding:'5px 14px',background:'transparent',color:'var(--text2)',border:'1px solid var(--border2)',borderRadius:'var(--radius)',cursor:'pointer',fontFamily:'var(--sans)',letterSpacing:'0.05em'}}>
+          📋 Notes 總覽
+        </button>
         <div className="header-meta">{ideasLoading ? '載入中...' : `${ideas.length} 個想法已儲存`}</div>
+      </div>
       </header>
 
       <div className="stat-bar">
@@ -601,6 +607,43 @@ export default function Home() {
 
       {notif && (
         <div className={`notif show${notif.type ? ' ' + notif.type : ''}`}>{notif.msg}</div>
+      )}
+
+      {showNotesPanel && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}} onClick={()=>setShowNotesPanel(false)}>
+          <div style={{width:480,height:'100vh',background:'var(--surface)',borderLeft:'1px solid var(--border2)',overflowY:'auto',padding:'36px 32px',display:'flex',flexDirection:'column',gap:24}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--text3)'}}>Script Prep</div>
+                <h2 style={{fontFamily:'var(--serif)',fontSize:26,fontWeight:400,color:'var(--text)',marginTop:2}}>Notes 總覽</h2>
+              </div>
+              <button onClick={()=>setShowNotesPanel(false)} style={{background:'none',border:'none',fontSize:20,color:'var(--text3)',cursor:'pointer'}}>×</button>
+            </div>
+            <div style={{height:1,background:'var(--border2)'}}/>
+            {ideas.filter(i => (notes[i.id] !== undefined ? notes[i.id] : i.notes)).map(idea => {
+              const noteContent = notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || '')
+              const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title||'')}&background=${encodeURIComponent(noteContent)}`
+              return (
+                <div key={idea.id} style={{borderBottom:'1px solid var(--border)',paddingBottom:20}}>
+                  <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:8}}>
+                    <div>
+                      <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)',marginBottom:3}}>{idea.topic}</div>
+                      <div style={{fontFamily:'var(--serif)',fontSize:16,fontWeight:500,color:'var(--text)'}}>{idea.title}</div>
+                    </div>
+                    <a href={scriptUrl} target="_blank" rel="noopener" style={{flexShrink:0,fontSize:10,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase',padding:'5px 12px',background:'var(--text)',color:'var(--bg)',borderRadius:'var(--radius)',textDecoration:'none',whiteSpace:'nowrap'}}>Script →</a>
+                  </div>
+                  <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.65,background:'var(--surface2)',padding:'10px 12px',borderRadius:'var(--radius)',whiteSpace:'pre-wrap',fontFamily:'var(--sans)'}}>{noteContent}</div>
+                </div>
+              )
+            })}
+            {ideas.filter(i => (notes[i.id] !== undefined ? notes[i.id] : i.notes)).length === 0 && (
+              <div style={{textAlign:'center',padding:'40px 0',color:'var(--text3)'}}>
+                <div style={{fontFamily:'var(--serif)',fontSize:20,fontStyle:'italic',marginBottom:8}}>尚未有 Notes</div>
+                <div style={{fontSize:12}}>喺每張 card 底部嘅 Notes 欄加入筆記</div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   );
