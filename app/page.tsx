@@ -4,11 +4,11 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 
 const COUNTRIES: Record<string, string> = {
-  HK:'ð­ð° é¦æ¸¯', TW:'ð¹ð¼ å°ç£', CN:'ð¨ð³ å§å°', JP:'ð¯ðµ æ¥æ¬',
-  KR:'ð°ð· éå', SG:'ð¸ð¬ æ°å å¡', TH:'ð¹ð­ æ³°å', MY:'ð²ð¾ é¦¬ä¾è¥¿äº',
-  ID:'ð®ð© å°å°¼', VN:'ð»ð³ è¶å', IN:'ð®ð³ å°åº¦',
-  US:'ðºð¸ ç¾å', GB:'ð¬ð§ è±å', AU:'ð¦ðº æ¾³æ´²', CA:'ð¨ð¦ å æ¿å¤§',
-  FR:'ð«ð· æ³å', DE:'ð©ðª å¾·å', OTHER:'ð å¶ä»'
+  HK:'🇭🇰 香港', TW:'🇹🇼 台灣', CN:'🇨🇳 內地', JP:'🇯🇵 日本',
+  KR:'🇰🇷 韓國', SG:'🇸🇬 新加坡', TH:'🇹🇭 泰國', MY:'🇲🇾 馬來西亞',
+  ID:'🇮🇩 印尼', VN:'🇻🇳 越南', IN:'🇮🇳 印度',
+  US:'🇺🇸 美國', GB:'🇬🇧 英國', AU:'🇦🇺 澳洲', CA:'🇨🇦 加拿大',
+  FR:'🇫🇷 法國', DE:'🇩🇪 德國', OTHER:'🌍 其他'
 };
 
 const SCRIPT_GEN_URL = 'https://script-generator-xi.vercel.app';
@@ -152,7 +152,7 @@ export default function Home() {
   }
 
   async function autoFillDesc() {
-    if (!placeName) { showNotif('è«åè¼¸å¥åºéªåç¨±', 'error'); return; }
+    if (!placeName) { showNotif('請先輸入店鋪名稱', 'error'); return; }
     setAutoFilling(true);
     try {
       const res = await fetch('/api/search-place', {
@@ -164,10 +164,12 @@ export default function Home() {
       if (d.error) throw new Error(d.error);
       if (d.desc) {
         setDesc(d.desc);
-        showNotif('èæ¯è³æå·²èªåçæ â', 'success');
+        if (d.lat) setPlaceLat(d.lat);
+        if (d.lng) setPlaceLng(d.lng);
+        showNotif('背景資料已自動生成 ✓', 'success');
       }
     } catch (err) {
-      showNotif('æå°å¤±æï¼è«æåå¡«å¯«', 'error');
+      showNotif('搜尋失敗，請手動填寫', 'error');
     }
     setAutoFilling(false);
   }
@@ -220,27 +222,27 @@ export default function Home() {
 
   async function handleSubmit() {
     if (isLoading) return;
-    if (!url && !image && !desc) { showNotif('è«è¼¸å¥ URLãä¸è¼æªåæè¼¸å¥æè¿°', 'error'); return; }
+    if (!url && !image && !desc) { showNotif('請輸入 URL、上載截圖或輸入描述', 'error'); return; }
     setIsLoading(true);
     setStatusSteps([
-      { label: 'è®åå§å®¹', state: 'active' },
-      { label: 'AI åæä¸»é¡', state: '' },
-      { label: 'è¨ç®çæ¬¾è©å', state: '' },
-      { label: 'å²å­', state: '' }
+      { label: '讀取內容', state: 'active' },
+      { label: 'AI 分析主題', state: '' },
+      { label: '計算爆款評分', state: '' },
+      { label: '儲存', state: '' }
     ]);
     try {
       setStatusSteps([
-        { label: 'è®åå§å®¹', state: 'done' },
-        { label: 'AI åæä¸»é¡', state: 'active' },
-        { label: 'è¨ç®çæ¬¾è©å', state: '' },
-        { label: 'å²å­', state: '' }
+        { label: '讀取內容', state: 'done' },
+        { label: 'AI 分析主題', state: 'active' },
+        { label: '計算爆款評分', state: '' },
+        { label: '儲存', state: '' }
       ]);
       const analysis = await callClaude(url, desc, image, +views || 0, +likes || 0, +shares || 0, country);
       setStatusSteps([
-        { label: 'è®åå§å®¹', state: 'done' },
-        { label: 'AI åæä¸»é¡', state: 'done' },
-        { label: 'è¨ç®çæ¬¾è©å', state: 'done' },
-        { label: 'å²å­ä¸­...', state: 'active' }
+        { label: '讀取內容', state: 'done' },
+        { label: 'AI 分析主題', state: 'done' },
+        { label: '計算爆款評分', state: 'done' },
+        { label: '儲存中...', state: 'active' }
       ]);
       const ideaData = {
         type: selectedType, url, thumb: image,
@@ -250,18 +252,18 @@ export default function Home() {
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
       setStatusSteps([
-        { label: 'è®åå§å®¹', state: 'done' },
-        { label: 'AI åæä¸»é¡', state: 'done' },
-        { label: 'è¨ç®çæ¬¾è©å', state: 'done' },
-        { label: 'å²å­å®æ', state: 'done' }
+        { label: '讀取內容', state: 'done' },
+        { label: 'AI 分析主題', state: 'done' },
+        { label: '計算爆款評分', state: 'done' },
+        { label: '儲存完成', state: 'done' }
       ]);
-      showNotif('æ³æ³å·²å²å­ â', 'success');
+      showNotif('想法已儲存 ✓', 'success');
       setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setTimeout(() => setStatusSteps(null), 2500);
     } catch (err) {
       console.error(err);
-      showNotif('å²å­å¤±æï¼è«éè©¦', 'error');
+      showNotif('儲存失敗，請重試', 'error');
       setStatusSteps(null);
     }
     setIsLoading(false);
@@ -290,9 +292,9 @@ export default function Home() {
 
   const typeBadge: Record<string, string> = { reel: 'badge-reel', blog: 'badge-blog', social: 'badge-social' };
   const typeLabel: Record<string, string> = { reel: 'IG Reel', blog: 'Blog', social: 'Social' };
-  const filterLabel = filter === 'all' ? 'æææ³æ³' :
-    filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' çæ³æ³' :
-    { reel: 'IG Reel', blog: 'æç«  / Blog', social: 'Social Post' }[filter] || filter;
+  const filterLabel = filter === 'all' ? '所有想法' :
+    filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' 的想法' :
+    { reel: 'IG Reel', blog: '文章 / Blog', social: 'Social Post' }[filter] || filter;
 
   return (
     <>
@@ -304,14 +306,14 @@ export default function Home() {
           <span className="brand-label">AI Media Content Creation</span>
           <h1 className="page-title">Idea Collection <em>/ Beta</em></h1>
         </div>
-        <div className="header-meta">{ideasLoading ? 'è¼å¥ä¸­...' : `${ideas.length} åæ³æ³å·²å²å­`}</div>
+        <div className="header-meta">{ideasLoading ? '載入中...' : `${ideas.length} 個想法已儲存`}</div>
       </header>
 
       <div className="stat-bar">
-        <span className="stat-bar-item"><strong>{ideas.length}</strong> åæ³æ³</span>
-        <span className="stat-bar-item"><strong>{fmtNum(totalViews)}</strong> ç¸½ Views</span>
-        <span className="stat-bar-item"><strong>{avgViral}</strong> å¹³åçæ¬¾å</span>
-        <span className="stat-bar-item"><strong>{countryCount}</strong> ååå®¶</span>
+        <span className="stat-bar-item"><strong>{ideas.length}</strong> 個想法</span>
+        <span className="stat-bar-item"><strong>{fmtNum(totalViews)}</strong> 總 Views</span>
+        <span className="stat-bar-item"><strong>{avgViral}</strong> 平均爆款分</span>
+        <span className="stat-bar-item"><strong>{countryCount}</strong> 個國家</span>
       </div>
 
       <div className="layout">
@@ -319,18 +321,18 @@ export default function Home() {
           <div className="step-block">
             <span className="step-num">01</span>
             <span className="step-label">URL / Link</span>
-            <input className="field" type="url" placeholder="ä¾ï¼https://www.instagram.com/reel/â¦"
+            <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
               value={url} onChange={e => setUrl(e.target.value)} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <input className="field" placeholder="åºéª / åçåç¨±"
+              <input className="field" placeholder="店鋪 / 品牌名稱"
                 value={placeName} onChange={e => setPlaceName(e.target.value)}
                 style={{ flex: 2 }} />
-              <input className="field" placeholder="å°åï¼é¸å¡«ï¼"
+              <input className="field" placeholder="地址（選填）"
                 value={placeAddress} onChange={e => setPlaceAddress(e.target.value)}
                 style={{ flex: 3 }} />
             </div>
             <div style={{ position: 'relative' }}>
-              <textarea className="field" rows={2} placeholder="çåæè¿°ï¼è£å AI åæï¼"
+              <textarea className="field" rows={2} placeholder="片嘅描述（補充 AI 分析）"
                 value={desc} onChange={e => setDesc(e.target.value)}
                 style={{ paddingBottom: 28 }} />
               <button
@@ -348,7 +350,7 @@ export default function Home() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {autoFilling ? 'æå°ä¸­...' : 'â¦ AI æå°'}
+                {autoFilling ? '搜尋中...' : '✦ AI 搜尋'}
               </button>
             </div>
           </div>
@@ -357,7 +359,7 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">02</span>
-            <span className="step-label">æªå / å°é¢</span>
+            <span className="step-label">截圖 / 封面</span>
             <div
               className={`upload-zone${isDrag ? ' drag' : ''}`}
               onClick={() => fileInputRef.current?.click()}
@@ -369,13 +371,13 @@ export default function Home() {
                 onChange={e => { const f = e.target.files?.[0]; if (f) readFile(f); }} />
               {image
                 ? <img src={image} alt="" style={{ width: '100%', borderRadius: 2, border: '1px solid var(--border)' }} />
-                : <div className="upload-text">Click ä¸è¼æææ¾æªå<br /><span style={{ fontSize: 10, opacity: 0.6 }}>PNG Â· JPG Â· WEBP</span></div>
+                : <div className="upload-text">Click 上載或拖放截圖<br /><span style={{ fontSize: 10, opacity: 0.6 }}>PNG · JPG · WEBP</span></div>
               }
             </div>
             {image && (
               <button onClick={() => { setImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                Ã ç§»é¤åç
+                × 移除圖片
               </button>
             )}
           </div>
@@ -384,21 +386,21 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">03</span>
-            <span className="step-label">æ¸æ</span>
+            <span className="step-label">數據</span>
             <div className="stats-row">
               <div className="stat-block">
                 <span className="stat-label">Views</span>
-                <input className="field" type="number" min="0" placeholder="ä¾ï¼1200000"
+                <input className="field" type="number" min="0" placeholder="例：1200000"
                   value={views} onChange={e => setViews(e.target.value)} />
               </div>
               <div className="stat-block">
                 <span className="stat-label">Likes</span>
-                <input className="field" type="number" min="0" placeholder="ä¾ï¼36000"
+                <input className="field" type="number" min="0" placeholder="例：36000"
                   value={likes} onChange={e => setLikes(e.target.value)} />
               </div>
               <div className="stat-block">
                 <span className="stat-label">Shares / Saves</span>
-                <input className="field" type="number" min="0" placeholder="ä¾ï¼48000"
+                <input className="field" type="number" min="0" placeholder="例：48000"
                   value={shares} onChange={e => setShares(e.target.value)} />
               </div>
             </div>
@@ -408,23 +410,23 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">04</span>
-            <span className="step-label">åå®¶ / å°å</span>
+            <span className="step-label">國家 / 地區</span>
             <select className="field" value={country} onChange={e => setCountry(e.target.value)}>
-              <option value="">â è«é¸æ â</option>
-              <optgroup label="äºæ´²">
-                <option value="HK">ð­ð° é¦æ¸¯</option><option value="TW">ð¹ð¼ å°ç£</option>
-                <option value="CN">ð¨ð³ ä¸­åå§å°</option><option value="JP">ð¯ðµ æ¥æ¬</option>
-                <option value="KR">ð°ð· éå</option><option value="SG">ð¸ð¬ æ°å å¡</option>
-                <option value="TH">ð¹ð­ æ³°å</option><option value="MY">ð²ð¾ é¦¬ä¾è¥¿äº</option>
-                <option value="ID">ð®ð© å°å°¼</option><option value="VN">ð»ð³ è¶å</option>
-                <option value="IN">ð®ð³ å°åº¦</option>
+              <option value="">— 請選擇 —</option>
+              <optgroup label="亞洲">
+                <option value="HK">🇭🇰 香港</option><option value="TW">🇹🇼 台灣</option>
+                <option value="CN">🇨🇳 中國內地</option><option value="JP">🇯🇵 日本</option>
+                <option value="KR">🇰🇷 韓國</option><option value="SG">🇸🇬 新加坡</option>
+                <option value="TH">🇹🇭 泰國</option><option value="MY">🇲🇾 馬來西亞</option>
+                <option value="ID">🇮🇩 印尼</option><option value="VN">🇻🇳 越南</option>
+                <option value="IN">🇮🇳 印度</option>
               </optgroup>
-              <optgroup label="è¥¿æ¹">
-                <option value="US">ðºð¸ ç¾å</option><option value="GB">ð¬ð§ è±å</option>
-                <option value="AU">ð¦ðº æ¾³æ´²</option><option value="CA">ð¨ð¦ å æ¿å¤§</option>
-                <option value="FR">ð«ð· æ³å</option><option value="DE">ð©ðª å¾·å</option>
+              <optgroup label="西方">
+                <option value="US">🇺🇸 美國</option><option value="GB">🇬🇧 英國</option>
+                <option value="AU">🇦🇺 澳洲</option><option value="CA">🇨🇦 加拿大</option>
+                <option value="FR">🇫🇷 法國</option><option value="DE">🇩🇪 德國</option>
               </optgroup>
-              <option value="OTHER">ð å¶ä»</option>
+              <option value="OTHER">🌍 其他</option>
             </select>
           </div>
 
@@ -432,12 +434,12 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">05</span>
-            <span className="step-label">å§å®¹é¡å</span>
+            <span className="step-label">內容類型</span>
             <div className="chips">
               {['reel', 'blog', 'social'].map(t => (
                 <button key={t} className={`chip${selectedType === t ? ' sel' : ''}`}
                   onClick={() => setSelectedType(t)}>
-                  {t === 'reel' ? 'IG Reel' : t === 'blog' ? 'æç«  / Blog' : 'Social Post'}
+                  {t === 'reel' ? 'IG Reel' : t === 'blog' ? '文章 / Blog' : 'Social Post'}
                 </button>
               ))}
             </div>
@@ -455,28 +457,33 @@ export default function Home() {
           )}
 
           <button className="btn-submit" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? <><span className="spinner" /> åæä¸­â¦</> : 'åæä¸¦å²å­æ³æ³'}
+            {isLoading ? <><span className="spinner" /> 分析中…</> : '分析並儲存想法'}
           </button>
         </div>
 
         <div className="gallery-panel">
           <div className="gallery-header">
-            <div className="gallery-title">{filterLabel} Â· {filtered.length} å</div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
+            <button onClick={()=>setShowWorldMap(v=>!v)} style={{fontSize:10,padding:"3px 10px",background:showWorldMap?"var(--text)":"transparent",color:showWorldMap?"var(--bg)":"var(--text3)",border:"1px solid var(--border2)",borderRadius:"var(--radius)",cursor:"pointer",fontFamily:"var(--sans)",letterSpacing:"0.05em"}}>
+              {showWorldMap ? "✕ 收起地圖" : "🗺 世界地圖"}
+            </button>
+          </div>
             <div className="controls">
-              <input className="search-field" placeholder="æå°â¦" value={search} onChange={e => setSearch(e.target.value)} />
+              <input className="search-field" placeholder="搜尋…" value={search} onChange={e => setSearch(e.target.value)} />
               <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
-                <option value="date">ææ°åªå</option>
-                <option value="viral">çæ¬¾è©å</option>
-                <option value="views">Views æå¤</option>
+                <option value="date">最新優先</option>
+                <option value="viral">爆款評分</option>
+                <option value="views">Views 最多</option>
               </select>
             </div>
           </div>
 
-          {showWorldMap && (
-          <div style={{marginBottom:20,borderRadius:'var(--radius-md)',overflow:'hidden',border:'1px solid var(--border2)'}}>
+          {showWorldMap && filtered.some((i:any)=>i.lat&&i.lng) && (
+          <div style={{marginBottom:20,borderRadius:"var(--radius-md)",overflow:"hidden",border:"1px solid var(--border2)"}}>
             <iframe
-              src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter(i=>i.lat&&i.lng).map((i:any)=>i.placeName||i.title).join('|'))}`}
-              width="100%" height="360" style={{border:0,display:'block'}} allowFullScreen
+              src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join('|'))}`}
+              width="100%" height="360" style={{border:0,display:"block"}} allowFullScreen
             />
           </div>
         )}
@@ -497,12 +504,12 @@ export default function Home() {
 
           {ideasLoading ? (
             <div className="empty-state">
-              <div className="empty-title">è¼å¥ä¸­...</div>
+              <div className="empty-title">載入中...</div>
             </div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-title">{ideas.length ? 'æ²æç¬¦åæ¢ä»¶çæ³æ³' : 'å°æªå²å­ä»»ä½æ³æ³'}</div>
-              <div className="empty-sub">{ideas.length ? 'è©¦è©¦å¶ä»ç¯©é¸ææå°' : 'è²¼å¥ä¸æ¢ URL æä¸è¼æªåï¼AI æèªååæä¸¦å²å­ã'}</div>
+              <div className="empty-title">{ideas.length ? '沒有符合條件的想法' : '尚未儲存任何想法'}</div>
+              <div className="empty-sub">{ideas.length ? '試試其他篩選或搜尋' : '貼入一條 URL 或上載截圖，AI 會自動分析並儲存。'}</div>
             </div>
           ) : (
             <div className="grid-wrap">
@@ -521,14 +528,14 @@ export default function Home() {
                         <button className="card-delete" onClick={async () => {
                           setIdeas(prev => prev.filter(i => i.id !== idea.id));
                           await deleteIdeaFromSupabase(idea.id);
-                        }}>Ã</button>
+                        }}>×</button>
                       </div>
                       {idea.thumb && <img src={idea.thumb} alt="" className="card-thumb visible" />}
                       {idea.topic && <div className="card-topic">{idea.topic}</div>}
-                      <div className="card-title">{idea.title || 'æªå½å'}</div>
+                      <div className="card-title">{idea.title || '未命名'}</div>
                       {idea.summary && <div className="card-summary">{idea.summary}</div>}
                       <div className="viral-row">
-                        <span className="viral-label">çæ¬¾</span>
+                        <span className="viral-label">爆款</span>
                         <div className="viral-bar"><div className="viral-fill" style={{ width: vs + '%', background: viralColor }} /></div>
                         <span className="viral-score">{vs}</span>
                       </div>
@@ -543,10 +550,18 @@ export default function Home() {
                         <div className="card-tags">{idea.tags.map((t: string) => <span key={t} className="tag">{t}</span>)}</div>
                       )}
                       {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
-                      {idea.scriptHook && <div className="hook-quote">ã{idea.scriptHook}ã</div>}
+                      {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
+                      {idea.lat && idea.lng && (
+                        <div style={{borderRadius:"var(--radius)",overflow:"hidden",border:"1px solid var(--border)"}}>
+                          <iframe
+                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${idea.lat},${idea.lng}&zoom=15`}
+                            width="100%" height="140" style={{border:0,display:"block"}} allowFullScreen
+                          />
+                        </div>
+                      )}
                       <div className="card-footer">
                         <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
-                        <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script â</a>
+                        <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script →</a>
                       </div>
                     </div>
                   );
