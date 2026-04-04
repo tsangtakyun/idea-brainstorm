@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
 
 const COUNTRIES: Record<string, string> = {
   HK:'🇭🇰 香港', TW:'🇹🇼 台灣', CN:'🇨🇳 內地', JP:'🇯🇵 日本',
@@ -11,15 +12,7 @@ const COUNTRIES: Record<string, string> = {
 };
 
 const SCRIPT_GEN_URL = 'https://script-generator-xi.vercel.app';
-const STORAGE_KEY = 'soon_ideas_v2';
 
-function loadIdeas() {
-  if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function saveIdeas(ideas: any[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
-}
 function fmtNum(n: number) {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
@@ -74,7 +67,8 @@ async function callClaude(url: string, desc: string, image: string | null, views
 }
 
 export default function Home() {
-  const [ideas, setIdeas] = useState<any[]>(loadIdeas);
+  const [ideas, setIdeas] = useState<any[]>([]);
+  const [ideasLoading, setIdeasLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('date');
   const [search, setSearch] = useState('');
@@ -86,7 +80,6 @@ export default function Home() {
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form fields
   const [url, setUrl] = useState('');
   const [desc, setDesc] = useState('');
   const [views, setViews] = useState('');
@@ -94,14 +87,70 @@ export default function Home() {
   const [shares, setShares] = useState('');
   const [country, setCountry] = useState('');
 
+  // 讀取 Supabase ideas
+  useEffect(() => {
+    const fetchIdeas = async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('ideas')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (!error && data) {
+        setIdeas(data.map((d: any) => ({
+          id: d.id,
+          type: d.type,
+          url: d.url,
+          thumb: d.thumb,
+          views: d.views,
+          likes: d.likes,
+          shares: d.shares,
+          country: d.country,
+          date: d.date,
+          title: d.title,
+          topic: d.topic,
+          summary: d.summary,
+          tags: d.tags || [],
+          viralScore: d.viral_score,
+          aiViralBase: d.ai_viral_base,
+          scriptHook: d.script_hook,
+        })))
+      }
+      setIdeasLoading(false)
+    }
+    fetchIdeas()
+  }, [])
+
   function showNotif(msg: string, type = '') {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 3000);
   }
 
-  function persistIdeas(next: any[]) {
-    setIdeas(next);
-    saveIdeas(next);
+  async function saveIdeaToSupabase(idea: any) {
+    const supabase = createClient()
+    const { data, error } = await supabase.from('ideas').insert({
+      type: idea.type,
+      url: idea.url,
+      thumb: idea.thumb,
+      views: idea.views,
+      likes: idea.likes,
+      shares: idea.shares,
+      country: idea.country,
+      date: idea.date,
+      title: idea.title,
+      topic: idea.topic,
+      summary: idea.summary,
+      tags: idea.tags,
+      viral_score: idea.viralScore,
+      ai_viral_base: idea.aiViralBase || 50,
+      script_hook: idea.scriptHook,
+    }).select().single()
+    if (error) throw error
+    return data
+  }
+
+  async function deleteIdeaFromSupabase(id: any) {
+    const supabase = createClient()
+    await supabase.from('ideas').delete().eq('id', id)
   }
 
   function readFile(file: File) {
@@ -143,15 +192,25 @@ export default function Home() {
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
         { label: '計算爆款評分', state: 'done' },
-        { label: '儲存完成', state: 'done' }
+        { label: '儲存中...', state: 'active' }
       ]);
 
-      const idea = {
-        id: Date.now(), type: selectedType, url, thumb: image,
+      const ideaData = {
+        type: selectedType, url, thumb: image,
         views: +views || 0, likes: +likes || 0, shares: +shares || 0,
         country: country || 'OTHER', date: new Date().toISOString(), ...analysis
       };
-      persistIdeas([idea, ...ideas]);
+
+      const saved = await saveIdeaToSupabase(ideaData)
+      setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
+
+      setStatusSteps([
+        { label: '讀取內容', state: 'done' },
+        { label: 'AI 分析主題', state: 'done' },
+        { label: '計算爆款評分', state: 'done' },
+        { label: '儲存完成', state: 'done' }
+      ]);
+
       showNotif('想法已儲存 ✓', 'success');
       setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -159,24 +218,12 @@ export default function Home() {
 
     } catch (err) {
       console.error(err);
-      const fallback = {
-        id: Date.now(), type: selectedType, url, thumb: image,
-        views: +views || 0, likes: +likes || 0, shares: +shares || 0,
-        country: country || 'OTHER', date: new Date().toISOString(),
-        title: url || desc || '未命名想法', topic: '待分類',
-        summary: desc || '', tags: [],
-        viralScore: computeViralScore(+views || 0, +likes || 0, +shares || 0, 50), scriptHook: ''
-      };
-      persistIdeas([fallback, ...ideas]);
-      showNotif('AI 分析失敗，已儲存草稿', 'error');
-      setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      showNotif('儲存失敗，請重試', 'error');
       setStatusSteps(null);
     }
     setIsLoading(false);
   }
 
-  // Filtered & sorted ideas
   const filtered = ideas
     .filter(i => {
       if (filter.startsWith('country-')) return i.country === filter.replace('country-', '');
@@ -214,7 +261,7 @@ export default function Home() {
           <span className="brand-label">AI Media Content Creation</span>
           <h1 className="page-title">Idea Collection <em>/ Beta</em></h1>
         </div>
-        <div className="header-meta">{ideas.length} 個想法已儲存</div>
+        <div className="header-meta">{ideasLoading ? '載入中...' : `${ideas.length} 個想法已儲存`}</div>
       </header>
 
       <div className="stat-bar">
@@ -225,9 +272,7 @@ export default function Home() {
       </div>
 
       <div className="layout">
-        {/* INPUT PANEL */}
         <div className="input-panel">
-
           <div className="step-block">
             <span className="step-num">01</span>
             <span className="step-label">URL / Link</span>
@@ -343,7 +388,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* GALLERY */}
         <div className="gallery-panel">
           <div className="gallery-header">
             <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
@@ -372,7 +416,11 @@ export default function Home() {
             ))}
           </div>
 
-          {filtered.length === 0 ? (
+          {ideasLoading ? (
+            <div className="empty-state">
+              <div className="empty-title">載入中...</div>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="empty-state">
               <div className="empty-title">{ideas.length ? '沒有符合條件的想法' : '尚未儲存任何想法'}</div>
               <div className="empty-sub">{ideas.length ? '試試其他篩選或搜尋' : '貼入一條 URL 或上載截圖，AI 會自動分析並儲存。'}</div>
@@ -383,7 +431,7 @@ export default function Home() {
                 {filtered.map(idea => {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
-                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(idea.summary || '')}&hook=${encodeURIComponent(idea.scriptHook || '')}&industry=${encodeURIComponent(idea.tags?.[0] || '')}`;
+                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(idea.summary || '')}`;
                   return (
                     <div key={idea.id} className="card">
                       <div className="card-head">
@@ -391,7 +439,10 @@ export default function Home() {
                           <span className={`badge ${typeBadge[idea.type] || 'badge-reel'}`}>{typeLabel[idea.type] || idea.type}</span>
                           {idea.country && <span className="badge badge-country">{COUNTRIES[idea.country] || idea.country}</span>}
                         </div>
-                        <button className="card-delete" onClick={() => persistIdeas(ideas.filter(i => i.id !== idea.id))}>×</button>
+                        <button className="card-delete" onClick={async () => {
+                          setIdeas(prev => prev.filter(i => i.id !== idea.id));
+                          await deleteIdeaFromSupabase(idea.id);
+                        }}>×</button>
                       </div>
                       {idea.thumb && <img src={idea.thumb} alt="" className="card-thumb visible" />}
                       {idea.topic && <div className="card-topic">{idea.topic}</div>}
