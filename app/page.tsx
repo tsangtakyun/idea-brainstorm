@@ -23,11 +23,34 @@ function hostOf(url: string) {
   catch { return url.slice(0, 40); }
 }
 function computeViralScore(views: number, likes: number, shares: number, aiScore: number) {
-  const likeRate = views > 0 ? Math.min((likes / views) * 500, 100) : 0;
-  const shareRate = views > 0 ? Math.min((shares / views) * 1000, 100) : 0;
-  const engScore = likeRate * 0.5 + shareRate * 0.5;
-  const reach = Math.min(Math.log10(Math.max(views, 1)) / 8 * 100, 100);
-  return Math.round(aiScore * 0.35 + engScore * 0.40 + reach * 0.25);
+  // Views 評分（根據你嘅標準）
+  let viewScore = 0
+  if (views >= 1000000) viewScore = 90 + Math.min((views - 1000000) / 500000 * 10, 10)      // 好爆 90-100
+  else if (views >= 500000) viewScore = 75 + (views - 500000) / 500000 * 15                  // 爆 75-90
+  else if (views >= 200000) viewScore = 55 + (views - 200000) / 300000 * 20                  // 好 55-75
+  else if (views >= 100000) viewScore = 35 + (views - 100000) / 100000 * 20                  // 合理 35-55
+  else if (views >= 50000) viewScore = 10 + (views - 50000) / 50000 * 25                     // 弱 10-35
+  else viewScore = 0                                                                           // 唔計
+
+  // Likes 評分（根據你嘅標準）
+  let likeScore = 0
+  if (likes >= 20000) likeScore = 90 + Math.min((likes - 20000) / 10000 * 10, 10)           // 好爆 90-100
+  else if (likes >= 10000) likeScore = 75 + (likes - 10000) / 10000 * 15                    // 爆 75-90
+  else if (likes >= 5000) likeScore = 55 + (likes - 5000) / 5000 * 20                      // 好 55-75
+  else if (likes >= 2000) likeScore = 30 + (likes - 2000) / 3000 * 25                      // 合理 30-55
+  else likeScore = 0                                                                          // 唔計
+
+  // Shares 評分
+  let shareScore = 0
+  if (shares >= 10000) shareScore = 90 + Math.min((shares - 10000) / 5000 * 10, 10)
+  else if (shares >= 5000) shareScore = 75 + (shares - 5000) / 5000 * 15
+  else if (shares >= 2000) shareScore = 55 + (shares - 2000) / 3000 * 20
+  else if (shares >= 500) shareScore = 30 + (shares - 500) / 1500 * 25
+  else shareScore = 0
+
+  // 加權：Views 35% + Likes 35% + Shares 15% + AI 15%
+  const total = Math.round(viewScore * 0.35 + likeScore * 0.35 + shareScore * 0.15 + aiScore * 0.15)
+  return Math.min(total, 100)
 }
 
 const SYSTEM = `You are an AI content strategist for SOON, a Hong Kong AI media content company.
