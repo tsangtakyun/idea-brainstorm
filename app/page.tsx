@@ -101,7 +101,8 @@ export default function Home() {
   const [placeLat, setPlaceLat] = useState<number | null>(null);
   const [placeLng, setPlaceLng] = useState<number | null>(null);
   const [showWorldMap, setShowWorldMap] = useState(false);
-  const [editingBg, setEditingBg] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [savingNote, setSavingNote] = useState<string | null>(null);
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +141,7 @@ export default function Home() {
           scriptHook: d.script_hook,
           lat: d.lat ?? null,
           lng: d.lng ?? null,
+          notes: d.notes ?? null,
         })))
       }
       setIdeasLoading(false)
@@ -198,6 +200,7 @@ export default function Home() {
       script_hook: idea.scriptHook,
       lat: idea.lat ?? null,
       lng: idea.lng ?? null,
+      notes: idea.notes ?? null,
     }).select().single()
     if (error) throw error
     return data
@@ -206,6 +209,13 @@ export default function Home() {
   async function deleteIdeaFromSupabase(id: any) {
     const supabase = createClient()
     await supabase.from('ideas').delete().eq('id', id)
+  }
+
+  async function saveNote(id: any, note: string) {
+    setSavingNote(id)
+    const supabase = createClient()
+    await supabase.from('ideas').update({ notes: note }).eq('id', id)
+    setSavingNote(null)
   }
 
   function readFile(file: File) {
@@ -248,7 +258,7 @@ export default function Home() {
       const ideaData = {
         type: selectedType, url, thumb: image,
         views: +views || 0, likes: +likes || 0, shares: +shares || 0,
-        country: country || 'OTHER', date: new Date().toISOString(), lat: placeLat, lng: placeLng, ...analysis
+        country: country || 'OTHER', date: new Date().toISOString(), lat: placeLat, lng: placeLng, notes: desc || null, ...analysis
       };
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
@@ -518,7 +528,7 @@ export default function Home() {
                 {filtered.map(idea => {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
-                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(editingBg[idea.id] !== undefined ? editingBg[idea.id] : (idea.summary || ''))}`;
+                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || ''))}`;
                   return (
                     <div key={idea.id} className="card">
                       <div className="card-head">
@@ -553,14 +563,19 @@ export default function Home() {
                       {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
                       {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
                       <div style={{marginTop:4}}>
-                        <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)',marginBottom:4}}>Background</div>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                          <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
+                          {savingNote === idea.id && <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span>}
+                          {savingNote !== idea.id && notes[idea.id] !== undefined && <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span>}
+                        </div>
                         <textarea
                           className="field"
-                          rows={3}
-                          style={{fontSize:11,lineHeight:1.5,resize:'vertical'}}
-                          value={editingBg[idea.id] !== undefined ? editingBg[idea.id] : (idea.summary || '')}
-                          onChange={e => setEditingBg(prev => ({...prev, [idea.id]: e.target.value}))}
-                          placeholder="編輯背景資料再生成 Script..."
+                          rows={4}
+                          style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
+                          value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
+                          onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
+                          onBlur={e => saveNote(idea.id, e.target.value)}
+                          placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
                         />
                       </div>
                       {idea.lat && idea.lng && (
