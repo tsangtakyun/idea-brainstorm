@@ -96,6 +96,8 @@ export default function Home() {
   const [isDrag, setIsDrag] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [placeName, setPlaceName] = useState('');
+  const [placeAddress, setPlaceAddress] = useState('');
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,39 +147,22 @@ export default function Home() {
   }
 
   async function autoFillDesc() {
-    if (!url) { showNotif('請先輸入 URL', 'error'); return; }
-    
-    // IG link 特別處理
-    if (url.includes('instagram.com')) {
-      setDesc('IG 片內容：\n主持：\n主題：\n賣點：')
-      showNotif('IG 連結請手動填入片嘅詳情', '')
-      return
-    }
-
+    if (!placeName) { showNotif('請先輸入店鋪名稱', 'error'); return; }
     setAutoFilling(true);
     try {
-      const res = await fetch('/api/analyse', {
+      const res = await fetch('/api/search-place', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: `You are a content researcher for SOON, a Hong Kong AI media content company.
-Given a URL, analyse the domain and URL structure to infer what the content is about.
-Return ONLY a JSON object (no markdown):
-{
-  "desc": "2-3 sentences in Traditional Chinese describing what this content is specifically about based on the URL. Include the topic, platform, and likely target audience. Be specific and useful for script writing."
-}`,
-          messages: [{ role: 'user', content: `URL: ${url}\n\nAnalyse this specific URL and generate a useful background description in Traditional Chinese. Focus on what can be inferred from the URL path, domain, and any keywords visible in the URL.` }]
-        })
+        body: JSON.stringify({ name: placeName, address: placeAddress }),
       });
       const d = await res.json();
-      const text = d.content.find((b: any) => b.type === 'text')?.text || '';
-      const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-      if (parsed.desc) {
-        setDesc(parsed.desc);
+      if (d.error) throw new Error(d.error);
+      if (d.desc) {
+        setDesc(d.desc);
         showNotif('背景資料已自動生成 ✓', 'success');
       }
     } catch (err) {
-      showNotif('自動生成失敗，請手動填寫', 'error');
+      showNotif('搜尋失敗，請手動填寫', 'error');
     }
     setAutoFilling(false);
   }
@@ -264,7 +249,7 @@ Return ONLY a JSON object (no markdown):
         { label: '儲存完成', state: 'done' }
       ]);
       showNotif('想法已儲存 ✓', 'success');
-      setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null);
+      setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       setTimeout(() => setStatusSteps(null), 2500);
     } catch (err) {
@@ -329,26 +314,34 @@ Return ONLY a JSON object (no markdown):
             <span className="step-label">URL / Link</span>
             <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
               value={url} onChange={e => setUrl(e.target.value)} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="field" placeholder="店鋪 / 品牌名稱"
+                value={placeName} onChange={e => setPlaceName(e.target.value)}
+                style={{ flex: 2 }} />
+              <input className="field" placeholder="地址（選填）"
+                value={placeAddress} onChange={e => setPlaceAddress(e.target.value)}
+                style={{ flex: 3 }} />
+            </div>
             <div style={{ position: 'relative' }}>
               <textarea className="field" rows={2} placeholder="片嘅描述（補充 AI 分析）"
                 value={desc} onChange={e => setDesc(e.target.value)}
                 style={{ paddingBottom: 28 }} />
               <button
                 onClick={autoFillDesc}
-                disabled={autoFilling || !url}
+                disabled={autoFilling || !placeName}
                 style={{
                   position: 'absolute', bottom: 8, right: 8,
                   fontSize: 10, padding: '3px 10px',
                   background: 'var(--text)', color: 'var(--bg)',
                   border: 'none', borderRadius: 'var(--radius)',
-                  cursor: autoFilling || !url ? 'not-allowed' : 'pointer',
-                  opacity: !url ? 0.4 : 1,
+                  cursor: autoFilling || !placeName ? 'not-allowed' : 'pointer',
+                  opacity: !placeName ? 0.4 : 1,
                   fontFamily: 'var(--sans)',
                   letterSpacing: '0.05em',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {autoFilling ? '生成中...' : '✦ AI 填入'}
+                {autoFilling ? '搜尋中...' : '✦ AI 搜尋'}
               </button>
             </div>
           </div>
