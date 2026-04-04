@@ -596,9 +596,34 @@ export default function Home() {
                           />
                         </div>
                       )}
+                      {expandedNotes[idea.id] && (
+                        <div>
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                            <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
+                            {savingNote === idea.id ? <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span> : notes[idea.id] !== undefined ? <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span> : null}
+                          </div>
+                          <textarea
+                            className="field"
+                            rows={4}
+                            style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
+                            value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
+                            onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
+                            onBlur={e => saveNote(idea.id, e.target.value)}
+                            placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
+                            autoFocus
+                          />
+                        </div>
+                      )}
                       <div className="card-footer">
                         <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
-                        <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script →</a>
+                        <div style={{display:'flex',gap:6}}>
+                          <button
+                            onClick={()=>setExpandedNotes(prev=>({...prev,[idea.id]:!prev[idea.id]}))}
+                            style={{fontSize:10,fontWeight:500,letterSpacing:'0.06em',padding:'5px 10px',background:expandedNotes[idea.id]?'var(--surface3)':'none',border:'1px solid var(--border2)',color:expandedNotes[idea.id]?'var(--text)':'var(--text2)',borderRadius:'var(--radius)',cursor:'pointer',fontFamily:'var(--sans)'}}>
+                            📝 {expandedNotes[idea.id] ? '▴' : '▾'}
+                          </button>
+                          <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script →</a>
+                        </div>
                       </div>
                     </div>
                   );
