@@ -1,4 +1,4 @@
-import { createServerClient, type CookieMethodsServer } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
-            )
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          getAll: () => cookieStore.getAll() as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setAll: (cookies: any[]) => {
+            cookies.forEach(({ name, value, options }: any) => {
+              cookieStore.set(name, value, options)
+            })
           },
         },
       }
