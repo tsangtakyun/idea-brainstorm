@@ -127,7 +127,10 @@ export default function Home() {
 
   async function saveIdeaToSupabase(idea: any) {
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not logged in')
     const { data, error } = await supabase.from('ideas').insert({
+      user_id: user.id,
       type: idea.type,
       url: idea.url,
       thumb: idea.thumb,
