@@ -146,6 +146,14 @@ export default function Home() {
 
   async function autoFillDesc() {
     if (!url) { showNotif('請先輸入 URL', 'error'); return; }
+    
+    // IG link 特別處理
+    if (url.includes('instagram.com')) {
+      setDesc('IG 片內容：\n主持：\n主題：\n賣點：')
+      showNotif('IG 連結請手動填入片嘅詳情', '')
+      return
+    }
+
     setAutoFilling(true);
     try {
       const res = await fetch('/api/analyse', {
@@ -153,19 +161,12 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system: `You are a content researcher for SOON, a Hong Kong AI media content company.
-The user has provided a social media URL. You cannot access the actual content, but based on the URL structure and any context provided, generate a useful background description.
-
-Important guidelines:
-- If it's an Instagram Reel URL, acknowledge it's a Reel and ask what the content is about
-- Focus on what information would be USEFUL for script writing
-- Generate 2-3 specific questions or prompts in Traditional Chinese to help the user fill in better details
-- Format as a helpful starting point, NOT a generic description
-
+Given a URL, analyse the domain and URL structure to infer what the content is about.
 Return ONLY a JSON object (no markdown):
 {
-  "desc": "2-3 sentences in Traditional Chinese. Start with what you can infer from the URL, then add a specific question like '請補充：這條片係關於咩內容？主持係誰？有咩特別賣點？' to help the user fill in useful details."
+  "desc": "2-3 sentences in Traditional Chinese describing what this content is specifically about based on the URL. Include the topic, platform, and likely target audience. Be specific and useful for script writing."
 }`,
-          messages: [{ role: 'user', content: `URL: ${url}\n\nAnalyse this URL and generate a background description in Traditional Chinese.` }]
+          messages: [{ role: 'user', content: `URL: ${url}\n\nAnalyse this specific URL and generate a useful background description in Traditional Chinese. Focus on what can be inferred from the URL path, domain, and any keywords visible in the URL.` }]
         })
       });
       const d = await res.json();
