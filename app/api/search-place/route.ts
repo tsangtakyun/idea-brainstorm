@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function stripCiteTags(text: string): string {
+  return text.replace(/<cite[^>]*>[\s\S]*?<\/cite>/g, (match) => {
+    return match.replace(/<cite[^>]*>|<\/cite>/g, '')
+  }).replace(/<\/?cite[^>]*>/g, '').trim()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { name, address } = await req.json()
@@ -15,10 +21,10 @@ export async function POST(req: NextRequest) {
       messages: [{
         role: 'user',
         content: `搜尋「${name}」${address ? `（地址：${address}）` : ''}嘅資料，然後用繁體中文廣東話寫一段2-3句嘅背景介紹，包括：店鋪特色、主打產品／服務、受歡迎程度、任何有趣嘅賣點。
-        
-只返回 JSON 格式（唔好加其他文字）：
+
+重要：只返回純 JSON 格式，desc 字段入面唔好有任何 HTML tags 或 citation markup：
 {
-  "desc": "背景介紹..."
+  "desc": "背景介紹純文字..."
 }`
       }]
     })
@@ -30,9 +36,11 @@ export async function POST(req: NextRequest) {
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('Cannot parse response')
-    const parsed = JSON.parse(jsonMatch[0])
 
-    return NextResponse.json({ desc: parsed.desc })
+    const parsed = JSON.parse(jsonMatch[0])
+    const cleanDesc = stripCiteTags(parsed.desc || '')
+
+    return NextResponse.json({ desc: cleanDesc })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
