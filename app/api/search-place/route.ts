@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any,
       messages: [{
         role: 'user',
         content: `搜尋「${name}」${address ? `（地址：${address}）` : ''}嘅資料，然後用繁體中文廣東話寫一段2-3句嘅背景介紹，包括：店鋪特色、主打產品／服務、受歡迎程度、任何有趣嘅賣點。
