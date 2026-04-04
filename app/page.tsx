@@ -479,10 +479,10 @@ export default function Home() {
             </div>
           </div>
 
-          {showWorldMap && filtered.some((i:any)=>i.lat&&i.lng) && (
+          {showWorldMap && filtered.length > 0 && (
           <div style={{marginBottom:20,borderRadius:"var(--radius-md)",overflow:"hidden",border:"1px solid var(--border2)"}}>
             <iframe
-              src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join('|'))}`}
+              src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).length > 0 ? filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join("|") : filtered.map((i:any)=>i.title).slice(0,3).join("|"))}`}
               width="100%" height="360" style={{border:0,display:"block"}} allowFullScreen
             />
           </div>
