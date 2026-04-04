@@ -153,10 +153,17 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system: `You are a content researcher for SOON, a Hong Kong AI media content company.
-Given a URL, analyse the domain and URL structure to infer what the content is about.
+The user has provided a social media URL. You cannot access the actual content, but based on the URL structure and any context provided, generate a useful background description.
+
+Important guidelines:
+- If it's an Instagram Reel URL, acknowledge it's a Reel and ask what the content is about
+- Focus on what information would be USEFUL for script writing
+- Generate 2-3 specific questions or prompts in Traditional Chinese to help the user fill in better details
+- Format as a helpful starting point, NOT a generic description
+
 Return ONLY a JSON object (no markdown):
 {
-  "desc": "2-3 sentences in Traditional Chinese describing what this content is likely about, who created it, and why it might be popular. Be specific based on the URL structure."
+  "desc": "2-3 sentences in Traditional Chinese. Start with what you can infer from the URL, then add a specific question like '請補充：這條片係關於咩內容？主持係誰？有咩特別賣點？' to help the user fill in useful details."
 }`,
           messages: [{ role: 'user', content: `URL: ${url}\n\nAnalyse this URL and generate a background description in Traditional Chinese.` }]
         })
