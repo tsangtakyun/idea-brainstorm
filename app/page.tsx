@@ -23,24 +23,21 @@ function hostOf(url: string) {
   catch { return url.slice(0, 40); }
 }
 function computeViralScore(views: number, likes: number, shares: number, aiScore: number) {
-  // Views 評分（根據你嘅標準）
   let viewScore = 0
-  if (views >= 1000000) viewScore = 90 + Math.min((views - 1000000) / 500000 * 10, 10)      // 好爆 90-100
-  else if (views >= 500000) viewScore = 75 + (views - 500000) / 500000 * 15                  // 爆 75-90
-  else if (views >= 200000) viewScore = 55 + (views - 200000) / 300000 * 20                  // 好 55-75
-  else if (views >= 100000) viewScore = 35 + (views - 100000) / 100000 * 20                  // 合理 35-55
-  else if (views >= 50000) viewScore = 10 + (views - 50000) / 50000 * 25                     // 弱 10-35
-  else viewScore = 0                                                                           // 唔計
+  if (views >= 1000000) viewScore = 90 + Math.min((views - 1000000) / 500000 * 10, 10)
+  else if (views >= 500000) viewScore = 75 + (views - 500000) / 500000 * 15
+  else if (views >= 200000) viewScore = 55 + (views - 200000) / 300000 * 20
+  else if (views >= 100000) viewScore = 35 + (views - 100000) / 100000 * 20
+  else if (views >= 50000) viewScore = 10 + (views - 50000) / 50000 * 25
+  else viewScore = 0
 
-  // Likes 評分（根據你嘅標準）
   let likeScore = 0
-  if (likes >= 20000) likeScore = 90 + Math.min((likes - 20000) / 10000 * 10, 10)           // 好爆 90-100
-  else if (likes >= 10000) likeScore = 75 + (likes - 10000) / 10000 * 15                    // 爆 75-90
-  else if (likes >= 5000) likeScore = 55 + (likes - 5000) / 5000 * 20                      // 好 55-75
-  else if (likes >= 2000) likeScore = 30 + (likes - 2000) / 3000 * 25                      // 合理 30-55
-  else likeScore = 0                                                                          // 唔計
+  if (likes >= 20000) likeScore = 90 + Math.min((likes - 20000) / 10000 * 10, 10)
+  else if (likes >= 10000) likeScore = 75 + (likes - 10000) / 10000 * 15
+  else if (likes >= 5000) likeScore = 55 + (likes - 5000) / 5000 * 20
+  else if (likes >= 2000) likeScore = 30 + (likes - 2000) / 3000 * 25
+  else likeScore = 0
 
-  // Shares 評分
   let shareScore = 0
   if (shares >= 10000) shareScore = 90 + Math.min((shares - 10000) / 5000 * 10, 10)
   else if (shares >= 5000) shareScore = 75 + (shares - 5000) / 5000 * 15
@@ -48,7 +45,6 @@ function computeViralScore(views: number, likes: number, shares: number, aiScore
   else if (shares >= 500) shareScore = 30 + (shares - 500) / 1500 * 25
   else shareScore = 0
 
-  // 加權：Views 35% + Likes 35% + Shares 15% + AI 15%
   const total = Math.round(viewScore * 0.35 + likeScore * 0.35 + shareScore * 0.15 + aiScore * 0.15)
   return Math.min(total, 100)
 }
@@ -60,7 +56,7 @@ Analyse the given content reference and return ONLY valid JSON (no markdown, no 
   "topic": "core topic theme in 3-5 Chinese/English words",
   "summary": "2-3 sentences in Traditional Chinese explaining why this could work for HK audience",
   "tags": ["tag1","tag2","tag3"],
-  "aiViralBase": <number 0-100>,
+  "aiViralBase": <number 0-100. Score based on content quality and viral potential: highly engaging/trending content = 70-90, good content = 50-70, average = 30-50, weak = below 30>,
   "scriptHook": "one punchy opening line in Traditional Chinese"
 }`;
 
@@ -99,6 +95,7 @@ export default function Home() {
   const [image, setImage] = useState<string | null>(null);
   const [isDrag, setIsDrag] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +107,6 @@ export default function Home() {
   const [shares, setShares] = useState('');
   const [country, setCountry] = useState('');
 
-  // 讀取 Supabase ideas
   useEffect(() => {
     const fetchIdeas = async () => {
       const supabase = createClient()
@@ -146,6 +142,36 @@ export default function Home() {
   function showNotif(msg: string, type = '') {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 3000);
+  }
+
+  async function autoFillDesc() {
+    if (!url) { showNotif('請先輸入 URL', 'error'); return; }
+    setAutoFilling(true);
+    try {
+      const res = await fetch('/api/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: `You are a content researcher for SOON, a Hong Kong AI media content company.
+Given a URL, analyse the domain and URL structure to infer what the content is about.
+Return ONLY a JSON object (no markdown):
+{
+  "desc": "2-3 sentences in Traditional Chinese describing what this content is likely about, who created it, and why it might be popular. Be specific based on the URL structure."
+}`,
+          messages: [{ role: 'user', content: `URL: ${url}\n\nAnalyse this URL and generate a background description in Traditional Chinese.` }]
+        })
+      });
+      const d = await res.json();
+      const text = d.content.find((b: any) => b.type === 'text')?.text || '';
+      const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+      if (parsed.desc) {
+        setDesc(parsed.desc);
+        showNotif('背景資料已自動生成 ✓', 'success');
+      }
+    } catch (err) {
+      showNotif('自動生成失敗，請手動填寫', 'error');
+    }
+    setAutoFilling(false);
   }
 
   async function saveIdeaToSupabase(idea: any) {
@@ -195,7 +221,6 @@ export default function Home() {
   async function handleSubmit() {
     if (isLoading) return;
     if (!url && !image && !desc) { showNotif('請輸入 URL、上載截圖或輸入描述', 'error'); return; }
-
     setIsLoading(true);
     setStatusSteps([
       { label: '讀取內容', state: 'active' },
@@ -203,7 +228,6 @@ export default function Home() {
       { label: '計算爆款評分', state: '' },
       { label: '儲存', state: '' }
     ]);
-
     try {
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
@@ -211,37 +235,30 @@ export default function Home() {
         { label: '計算爆款評分', state: '' },
         { label: '儲存', state: '' }
       ]);
-
       const analysis = await callClaude(url, desc, image, +views || 0, +likes || 0, +shares || 0, country);
-
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
         { label: '計算爆款評分', state: 'done' },
         { label: '儲存中...', state: 'active' }
       ]);
-
       const ideaData = {
         type: selectedType, url, thumb: image,
         views: +views || 0, likes: +likes || 0, shares: +shares || 0,
         country: country || 'OTHER', date: new Date().toISOString(), ...analysis
       };
-
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
-
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
         { label: '計算爆款評分', state: 'done' },
         { label: '儲存完成', state: 'done' }
       ]);
-
       showNotif('想法已儲存 ✓', 'success');
       setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setTimeout(() => setStatusSteps(null), 2500);
-
     } catch (err) {
       console.error(err);
       showNotif('儲存失敗，請重試', 'error');
@@ -304,8 +321,28 @@ export default function Home() {
             <span className="step-label">URL / Link</span>
             <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
               value={url} onChange={e => setUrl(e.target.value)} />
-            <textarea className="field" rows={2} placeholder="片嘅描述（補充 AI 分析）"
-              value={desc} onChange={e => setDesc(e.target.value)} />
+            <div style={{ position: 'relative' }}>
+              <textarea className="field" rows={2} placeholder="片嘅描述（補充 AI 分析）"
+                value={desc} onChange={e => setDesc(e.target.value)}
+                style={{ paddingBottom: 28 }} />
+              <button
+                onClick={autoFillDesc}
+                disabled={autoFilling || !url}
+                style={{
+                  position: 'absolute', bottom: 8, right: 8,
+                  fontSize: 10, padding: '3px 10px',
+                  background: 'var(--text)', color: 'var(--bg)',
+                  border: 'none', borderRadius: 'var(--radius)',
+                  cursor: autoFilling || !url ? 'not-allowed' : 'pointer',
+                  opacity: !url ? 0.4 : 1,
+                  fontFamily: 'var(--sans)',
+                  letterSpacing: '0.05em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {autoFilling ? '生成中...' : '✦ AI 填入'}
+              </button>
+            </div>
           </div>
 
           <div className="divider" />
