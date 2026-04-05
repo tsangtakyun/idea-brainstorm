@@ -265,10 +265,24 @@ export default function Home() {
         { label: '計算爆款評分', state: 'done' },
         { label: '儲存中...', state: 'active' }
       ]);
+      // Auto-geocode if lat/lng not already set by AI search
+      let finalLat = placeLat
+      let finalLng = placeLng
+      if (!finalLat && !finalLng && (placeName || analysis.title)) {
+        try {
+          const geoQuery = encodeURIComponent([placeName, placeAddress, COUNTRIES[country] || country].filter(Boolean).join(' '))
+          const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${geoQuery}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`)
+          const geoData = await geoRes.json()
+          if (geoData.status === 'OK' && geoData.results[0]) {
+            finalLat = geoData.results[0].geometry.location.lat
+            finalLng = geoData.results[0].geometry.location.lng
+          }
+        } catch (e) { /* silent fail */ }
+      }
       const ideaData = {
         type: selectedType, url, thumb: image,
         views: +views || 0, likes: +likes || 0, shares: +shares || 0,
-        country: country || 'OTHER', date: new Date().toISOString(), lat: placeLat, lng: placeLng, notes: desc || null, ...analysis
+        country: country || 'OTHER', date: new Date().toISOString(), lat: finalLat, lng: finalLng, notes: desc || null, ...analysis
       };
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
