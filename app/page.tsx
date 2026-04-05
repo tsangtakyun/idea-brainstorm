@@ -146,6 +146,14 @@ export default function Home() {
           notes: d.notes ?? null,
         })))
       }
+      // Initialise notes state from Supabase
+      const initialNotes: Record<string, string> = {}
+      if (data) {
+        data.forEach((d: any) => {
+          if (d.notes) initialNotes[d.id] = d.notes
+        })
+      }
+      setNotes(initialNotes)
       setIdeasLoading(false)
     }
     fetchIdeas()
