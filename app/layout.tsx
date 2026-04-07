@@ -74,6 +74,15 @@ function NavBar() {
         }}>
           🎬 分鏡指引 Shooting Guideline
         </a>
+        <a href="https://soon-strategy-library.vercel.app/strategy-library" style={{
+          fontSize: '13px',
+          color: '#888',
+          textDecoration: 'none',
+          padding: '6px 14px',
+          letterSpacing: '0.03em',
+        }}>
+          📚 Marketing Strategy Library
+        </a>
       </div>
     </nav>
   )
