@@ -128,6 +128,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [url, setUrl] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [views, setViews] = useState('');
   const [likes, setLikes] = useState('');
@@ -340,9 +341,19 @@ export default function Home() {
         } catch (e) { /* silent fail */ }
       }
       const ideaData = {
-        type: selectedType, url, thumb: image,
-        views: +views || 0, likes: +likes || 0, shares: +shares || 0,
-        country: country || 'OTHER', date: new Date().toISOString(), lat: finalLat, lng: finalLng, notes: desc || null, ...analysis
+        type: selectedType,
+        url,
+        thumb: image,
+        views: +views || 0,
+        likes: +likes || 0,
+        shares: +shares || 0,
+        country: country || 'OTHER',
+        date: new Date().toISOString(),
+        lat: finalLat,
+        lng: finalLng,
+        notes: desc || null,
+        ...analysis,
+        title: customTitle.trim() || analysis.title,
       };
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
@@ -353,7 +364,7 @@ export default function Home() {
         { label: '儲存完成', state: 'done' }
       ]);
       showNotif('想法已儲存 ✓', 'success');
-      setUrl(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
+      setUrl(''); setCustomTitle(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setTimeout(() => setStatusSteps(null), 2500);
     } catch (err) {
@@ -515,6 +526,22 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">03</span>
+            <span className="step-label">自設題目</span>
+            <input
+              className="field"
+              placeholder="如果你有想法，可以自己寫題目；留空就由 AI 生成"
+              value={customTitle}
+              onChange={e => setCustomTitle(e.target.value)}
+            />
+            <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
+              有填會優先用你嘅題目；冇填就由 AI 幫你生成。
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="step-block">
+            <span className="step-num">04</span>
             <span className="step-label">數據</span>
             <div className="stats-row">
               <div className="stat-block">
@@ -538,7 +565,7 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">04</span>
+            <span className="step-num">05</span>
             <span className="step-label">國家 / 地區</span>
             <select className="field" value={country} onChange={e => setCountry(e.target.value)}>
               <option value="">— 請選擇 —</option>
@@ -562,7 +589,7 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">05</span>
+            <span className="step-num">06</span>
             <span className="step-label">內容類型</span>
             <div className="chips">
               {['reel', 'blog', 'social'].map(t => (
@@ -641,107 +668,123 @@ export default function Home() {
               <div className="empty-sub">{ideas.length ? '試試其他篩選或搜尋' : '貼入一條 URL 或上載截圖，AI 會自動分析並儲存。'}</div>
             </div>
           ) : (
-            <div className="grid-wrap">
-              <div className="grid">
+            <div className="list-wrap">
+              <div className="list-head">
+                <div>題材</div>
+                <div>爆款指數</div>
+                <div>數據</div>
+                <div>來源 / 地區</div>
+                <div>操作</div>
+              </div>
+              <div className="idea-list">
                 {filtered.map(idea => {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
-                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || ''))}`;
+                  const noteContent = notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '');
+                  const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(noteContent)}`;
                   const platform = inferPlatformFromUrl(idea.url || '');
                   return (
-                    <div key={idea.id} className="card">
-                      <div className="card-head">
-                        <div className="card-badges">
-                          {platform && (
-                            <span className="badge badge-country">
-                              {PLATFORM_META[platform]?.emoji || '🌐'} {PLATFORM_META[platform]?.label || platform}
-                            </span>
+                    <div key={idea.id} className="idea-row-group">
+                      <div className="idea-row">
+                        <div className="idea-main">
+                          {idea.thumb ? (
+                            <img src={idea.thumb} alt="" className="idea-thumb" />
+                          ) : (
+                            <div className="idea-thumb placeholder">SOON</div>
                           )}
-                          <span className={`badge ${typeBadge[idea.type] || 'badge-reel'}`}>{typeLabel[idea.type] || idea.type}</span>
-                          {idea.country && <span className="badge badge-country">{COUNTRIES[idea.country] || idea.country}</span>}
-                        </div>
-                        <button className="card-delete" onClick={async () => {
-                          setIdeas(prev => prev.filter(i => i.id !== idea.id));
-                          await deleteIdeaFromSupabase(idea.id);
-                        }}>×</button>
-                      </div>
-                      {idea.thumb && <img src={idea.thumb} alt="" className="card-thumb visible" />}
-                      {idea.topic && <div className="card-topic">{idea.topic}</div>}
-                      <div className="card-title">{idea.title || '未命名'}</div>
-                      {idea.summary && <div className="card-summary">{idea.summary}</div>}
-                      <div className="viral-row">
-                        <span className="viral-label">爆款</span>
-                        <div className="viral-bar"><div className="viral-fill" style={{ width: vs + '%', background: viralColor }} /></div>
-                        <span className="viral-score">{vs}</span>
-                      </div>
-                      {(idea.views || idea.likes || idea.shares) && (
-                        <div className="card-stats">
-                          {idea.views ? <div className="stat-item"><div className="stat-val">{fmtNum(idea.views)}</div><div className="stat-key">Views</div></div> : null}
-                          {idea.likes ? <div className="stat-item"><div className="stat-val">{fmtNum(idea.likes)}</div><div className="stat-key">Likes</div></div> : null}
-                          {idea.shares ? <div className="stat-item"><div className="stat-val">{fmtNum(idea.shares)}</div><div className="stat-key">Shares</div></div> : null}
-                        </div>
-                      )}
-                      {idea.tags?.length > 0 && (
-                        <div className="card-tags">{idea.tags.map((t: string) => <span key={t} className="tag">{t}</span>)}</div>
-                      )}
-                      {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
-                      {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
-                      {expandedNotes[idea.id] && (
-                        <div style={{marginTop:4}}>
-                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                            <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
-                            {savingNote === idea.id && <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span>}
-                            {savingNote !== idea.id && notes[idea.id] !== undefined && <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span>}
+                          <div className="idea-main-copy">
+                            {idea.topic && <div className="idea-topic">{idea.topic}</div>}
+                            <div className="idea-title">{idea.title || '未命名'}</div>
+                            {idea.summary && <div className="idea-summary">{idea.summary}</div>}
+                            <div className="idea-badges">
+                              {platform && (
+                                <span className="badge badge-country">
+                                  {PLATFORM_META[platform]?.emoji || '🌐'} {PLATFORM_META[platform]?.label || platform}
+                                </span>
+                              )}
+                              <span className={`badge ${typeBadge[idea.type] || 'badge-reel'}`}>{typeLabel[idea.type] || idea.type}</span>
+                              {idea.country && <span className="badge badge-country">{COUNTRIES[idea.country] || idea.country}</span>}
+                              {idea.tags?.slice(0, 3).map((t: string) => <span key={t} className="tag">{t}</span>)}
+                            </div>
                           </div>
-                          <textarea
-                            className="field"
-                            rows={4}
-                            style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
-                            value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
-                            onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
-                            onBlur={e => saveNote(idea.id, e.target.value)}
-                            placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
-                            autoFocus
-                          />
                         </div>
-                      )}
-                      {idea.lat && idea.lng && (
-                        <div style={{borderRadius:"var(--radius)",overflow:"hidden",border:"1px solid var(--border)"}}>
-                          <iframe
-                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${idea.lat},${idea.lng}&zoom=15`}
-                            width="100%" height="140" style={{border:0,display:"block"}} allowFullScreen
-                          />
-                        </div>
-                      )}
-                      {expandedNotes[idea.id] && (
-                        <div>
-                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                            <span style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)'}}>📝 Notes</span>
-                            {savingNote === idea.id ? <span style={{fontSize:9,color:'var(--text3)'}}>儲存中...</span> : notes[idea.id] !== undefined ? <span style={{fontSize:9,color:'#3d7a5c'}}>✓ 已儲存</span> : null}
+
+                        <div className="idea-score-cell">
+                          <div className="score-pill">{vs}</div>
+                          <div className="viral-row wide">
+                            <span className="viral-label">爆款指數</span>
+                            <div className="viral-bar"><div className="viral-fill" style={{ width: vs + '%', background: viralColor }} /></div>
                           </div>
-                          <textarea
-                            className="field"
-                            rows={4}
-                            style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
-                            value={notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '')}
-                            onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
-                            onBlur={e => saveNote(idea.id, e.target.value)}
-                            placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
-                            autoFocus
-                          />
                         </div>
-                      )}
-                      <div className="card-footer">
-                        <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
-                        <div style={{display:'flex',gap:6}}>
+
+                        <div className="idea-metrics">
+                          <div className="metric-box">
+                            <div className="metric-value">{fmtNum(idea.views || 0)}</div>
+                            <div className="metric-key">Views</div>
+                          </div>
+                          <div className="metric-box">
+                            <div className="metric-value">{fmtNum(idea.likes || 0)}</div>
+                            <div className="metric-key">Likes</div>
+                          </div>
+                          <div className="metric-box">
+                            <div className="metric-value">{fmtNum(idea.shares || 0)}</div>
+                            <div className="metric-key">Shares</div>
+                          </div>
+                        </div>
+
+                        <div className="idea-meta">
+                          {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
+                          <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
+                        </div>
+
+                        <div className="idea-actions">
                           <button
                             onClick={()=>setExpandedNotes(prev=>({...prev,[idea.id]:!prev[idea.id]}))}
-                            style={{fontSize:10,fontWeight:500,letterSpacing:'0.06em',padding:'5px 10px',background:expandedNotes[idea.id]?'var(--surface3)':'none',border:'1px solid var(--border2)',color:expandedNotes[idea.id]?'var(--text)':'var(--text2)',borderRadius:'var(--radius)',cursor:'pointer',fontFamily:'var(--sans)'}}>
-                            📝 {expandedNotes[idea.id] ? '▴' : '▾'}
+                            className="row-action-btn"
+                          >
+                            📝 {expandedNotes[idea.id] ? '收起' : 'Notes'}
                           </button>
                           <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script →</a>
+                          <button className="card-delete row-delete" onClick={async () => {
+                            setIdeas(prev => prev.filter(i => i.id !== idea.id));
+                            await deleteIdeaFromSupabase(idea.id);
+                          }}>×</button>
                         </div>
                       </div>
+
+                      {expandedNotes[idea.id] && (
+                        <div className="idea-expanded">
+                          <div className="idea-expanded-grid">
+                            <div>
+                              <div className="expanded-label">Notes</div>
+                              <textarea
+                                className="field"
+                                rows={5}
+                                style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
+                                value={noteContent}
+                                onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
+                                onBlur={e => saveNote(idea.id, e.target.value)}
+                                placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
+                              />
+                              <div className="expanded-save-state">
+                                {savingNote === idea.id ? '儲存中...' : notes[idea.id] !== undefined ? '✓ 已儲存' : ''}
+                              </div>
+                            </div>
+
+                            <div className="idea-expanded-side">
+                              {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
+                              {idea.lat && idea.lng && (
+                                <div style={{borderRadius:"var(--radius)",overflow:"hidden",border:"1px solid var(--border)"}}>
+                                  <iframe
+                                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${idea.lat},${idea.lng}&zoom=15`}
+                                    width="100%" height="140" style={{border:0,display:"block"}} allowFullScreen
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -847,37 +890,53 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .search-field{padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;font-weight:300;outline:none;width:180px;transition:border-color 0.2s}
 .search-field:focus{border-color:var(--border2)}.search-field::placeholder{color:var(--text3)}
 .sort-select{padding:5px 28px 5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text2);font-family:var(--sans);font-size:11px;font-weight:300;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8780' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px}
-.grid-wrap{border:1px solid var(--border2);border-radius:var(--radius-md);overflow:hidden}
+.list-wrap{border:1px solid var(--border2);border-radius:var(--radius-md);overflow:hidden;background:var(--surface)}
+.list-head{display:grid;grid-template-columns:minmax(320px,1.8fr) minmax(180px,0.9fr) minmax(180px,0.9fr) minmax(140px,0.8fr) minmax(180px,0.9fr);gap:16px;padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
+.idea-list{display:flex;flex-direction:column}
+.idea-row-group{border-bottom:1px solid var(--border)}
+.idea-row-group:last-child{border-bottom:none}
+.idea-row{display:grid;grid-template-columns:minmax(320px,1.8fr) minmax(180px,0.9fr) minmax(180px,0.9fr) minmax(140px,0.8fr) minmax(180px,0.9fr);gap:16px;padding:16px;background:var(--surface);align-items:center}
+.idea-row:hover{background:var(--surface2)}
+.idea-main{display:flex;align-items:flex-start;gap:14px;min-width:0}
+.idea-thumb{width:90px;height:64px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.idea-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:0.12em;color:var(--text3)}
+.idea-main-copy{min-width:0;display:flex;flex-direction:column;gap:5px}
+.idea-topic{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3)}
+.idea-title{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--text);line-height:1.15;letter-spacing:-0.02em}
+.idea-summary{font-size:12px;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.idea-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.idea-score-cell{display:flex;flex-direction:column;gap:10px}
+.score-pill{display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:6px 10px;border-radius:999px;background:var(--surface3);font-family:var(--serif);font-size:22px;font-weight:500;color:var(--text)}
+.viral-row.wide{gap:8px}
+.idea-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.metric-box{padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2)}
+.metric-value{font-family:var(--serif);font-size:18px;font-weight:500;color:var(--text)}
+.metric-key{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
+.idea-meta{display:flex;flex-direction:column;gap:8px}
+.idea-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:5px 10px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
+.row-action-btn:hover{background:var(--surface3);color:var(--text)}
+.row-delete{padding:5px 8px;border:1px solid var(--border2)}
+.idea-expanded{padding:0 16px 16px;background:var(--surface)}
+.idea-expanded-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr);gap:16px;padding:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2)}
+.idea-expanded-side{display:flex;flex-direction:column;gap:12px}
+.expanded-label{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.expanded-save-state{font-size:10px;color:var(--text3);margin-top:6px}
 .empty-state{text-align:center;padding:80px 20px;color:var(--text3)}
 .empty-title{font-family:var(--serif);font-size:22px;font-style:italic;color:var(--text2);margin-bottom:8px}
 .empty-sub{font-size:13px}
-.card{background:var(--surface);padding:22px 20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);transition:background 0.15s}
-.card:hover{background:var(--surface2)}
-.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.card-badges{display:flex;gap:6px;flex-wrap:wrap}
 .badge{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:2px 8px;border-radius:2px;border:1px solid currentColor;opacity:0.75}
 .badge-reel{color:#6b5d9e}.badge-blog{color:#3d7a5c}.badge-social{color:#a05a3a}.badge-country{color:var(--text3);border-color:var(--border2)}
 .card-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:2px;transition:color 0.15s;flex-shrink:0}
 .card-delete:hover{color:var(--text)}
-.card-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)}
-.card-title{font-family:var(--serif);font-size:17px;font-weight:500;color:var(--text);line-height:1.35;letter-spacing:-0.01em}
-.card-topic{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);padding-bottom:8px;border-bottom:1px solid var(--border)}
-.card-summary{font-size:12px;color:var(--text2);line-height:1.6;font-weight:300}
 .viral-row{display:flex;align-items:center;gap:10px}
 .viral-label{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
 .viral-bar{flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
 .viral-fill{height:100%;border-radius:2px;transition:width 0.6s ease}
 .viral-score{font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;min-width:36px;text-align:right}
-.card-stats{display:flex;gap:14px}
-.stat-item{display:flex;flex-direction:column;gap:1px}
-.stat-val{font-size:14px;font-weight:500;color:var(--text);font-family:var(--serif)}
-.stat-key{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
-.card-tags{display:flex;flex-wrap:wrap;gap:5px}
 .tag{font-size:10px;padding:2px 9px;background:var(--tag-bg);border-radius:12px;color:var(--text2)}
 .card-source{font-size:10px;color:var(--text3);word-break:break-all;text-decoration:none;display:block}
 .card-source:hover{color:var(--text2)}
-.card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
 .card-date{font-size:10px;color:var(--text3);font-weight:300}
 .btn-script{font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;padding:5px 12px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--radius);cursor:pointer;text-decoration:none;transition:all 0.15s}
 .btn-script:hover{background:var(--text);color:var(--bg);border-color:var(--text)}
@@ -886,5 +945,6 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .notif.show{transform:translateY(0);opacity:1}
 .notif.success{border-color:rgba(90,138,106,0.4);color:#3d7a5c}
 .notif.error{border-color:rgba(180,80,60,0.3);color:#a05a3a}
-@media(max-width:860px){.layout{grid-template-columns:1fr}.input-panel{position:static;height:auto}}
+@media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}.idea-expanded-grid{grid-template-columns:1fr}}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.input-panel{position:static;height:auto}.idea-main{flex-direction:column}.idea-thumb{width:100%;height:180px}}
 `;
