@@ -20,8 +20,9 @@ function sectionCard(title: string, eyebrow: string, content: ReactNode) {
   )
 }
 
-export default function CampaignWorkspaceDetailPage({ params }: { params: { id: string } }) {
-  const campaign = getCampaignById(params.id)
+export default async function CampaignWorkspaceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const campaign = getCampaignById(id)
 
   if (!campaign) notFound()
 
