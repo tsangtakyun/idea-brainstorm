@@ -280,7 +280,7 @@ export default function Home() {
       showNotif(data.warning || '已完成進階擷取，請記得 double check', 'success');
     } catch (err) {
       console.error(err);
-      showNotif('進階擷取失敗，請稍後再試或改用截圖', 'error');
+      showNotif(err instanceof Error ? err.message : '進階擷取失敗，請稍後再試或改用截圖', 'error');
     }
     setBrowserAssistLoading(false);
   }

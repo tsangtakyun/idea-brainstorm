@@ -108,8 +108,10 @@ Infer the likely country, content type, place name, place address, and a useful 
 
 export async function POST(req: NextRequest) {
   let browser: import('playwright-core').Browser | null = null
+  let stage = 'init'
 
   try {
+    stage = 'parse-request'
     const { url } = await req.json()
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL required' }, { status: 400 })
@@ -122,28 +124,36 @@ export async function POST(req: NextRequest) {
     const parsedUrl = new URL(normalizedUrl)
     const platform = inferPlatform(parsedUrl.hostname.replace('www.', ''))
 
+    stage = 'launch-browser'
     browser = await playwright.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--disable-dev-shm-usage'],
       executablePath: await chromium.executablePath(),
-      headless: true,
+      headless: chromium.headless,
     })
 
+    stage = 'new-page'
     const page = await browser.newPage({
       viewport: { width: 1280, height: 1800 },
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+      ignoreHTTPSErrors: true,
     })
 
+    stage = 'goto-url'
     await page.goto(normalizedUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await page.waitForTimeout(2500)
 
+    stage = 'screenshot-first'
     const firstShot = await page.screenshot({ type: 'png', fullPage: false })
+    stage = 'click-more'
     const clickedMore = await tryClickMore(page)
     if (clickedMore) {
       await page.waitForTimeout(1200)
     }
+    stage = 'screenshot-second'
     const secondShot = await page.screenshot({ type: 'png', fullPage: false })
 
     const screenshots = [toDataUrl(firstShot), toDataUrl(secondShot)]
+    stage = 'analyse-screenshots'
     const analysis = await analyseScreenshots({
       url: normalizedUrl,
       platform,
@@ -166,7 +176,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: `[${stage}] ${message}` }, { status: 500 })
   } finally {
     if (browser) {
       await browser.close()
