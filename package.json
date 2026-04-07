@@ -12,6 +12,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "@anthropic-ai/sdk": "^0.39.0",
+    "@sparticuz/chromium": "^135.0.0",
+    "playwright-core": "^1.54.1",
     "@supabase/supabase-js": "^2.49.4",
     "@supabase/ssr": "^0.6.1"
   },
