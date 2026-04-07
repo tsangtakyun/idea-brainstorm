@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     browser = await playwright.launch({
       args: [...chromium.args, '--disable-dev-shm-usage'],
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
     })
 
     stage = 'new-page'
