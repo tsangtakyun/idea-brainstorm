@@ -732,6 +732,7 @@ export default function Home() {
                         </div>
 
                         <div className="idea-meta">
+                          {idea.url && <a className="video-link-btn" href={idea.url} target="_blank" rel="noopener">{PLATFORM_META[platform]?.label || '影片'} →</a>}
                           {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
                           <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
                         </div>
@@ -741,7 +742,7 @@ export default function Home() {
                             onClick={()=>setExpandedNotes(prev=>({...prev,[idea.id]:!prev[idea.id]}))}
                             className="row-action-btn"
                           >
-                            📝 {expandedNotes[idea.id] ? '收起' : 'Notes'}
+                            {expandedNotes[idea.id] ? '▴ 收起詳情' : '▾ 詳情'}
                           </button>
                           <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">Script →</a>
                           <button className="card-delete row-delete" onClick={async () => {
@@ -755,7 +756,7 @@ export default function Home() {
                         <div className="idea-expanded">
                           <div className="idea-expanded-grid">
                             <div>
-                              <div className="expanded-label">Notes</div>
+                              <div className="expanded-label">詳細內容</div>
                               <textarea
                                 className="field"
                                 rows={5}
@@ -898,6 +899,8 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .viral-fill{height:100%;border-radius:2px;transition:width 0.6s ease}
 .viral-score{font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;min-width:36px;text-align:right}
 .tag{font-size:10px;padding:2px 9px;background:var(--tag-bg);border-radius:12px;color:var(--text2)}
+.video-link-btn{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface2);font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text2);text-decoration:none;transition:all 0.15s;width:max-content}
+.video-link-btn:hover{background:var(--text);color:var(--bg);border-color:var(--text)}
 .card-source{font-size:10px;color:var(--text3);word-break:break-all;text-decoration:none;display:block}
 .card-source:hover{color:var(--text2)}
 .card-date{font-size:10px;color:var(--text3);font-weight:300}
