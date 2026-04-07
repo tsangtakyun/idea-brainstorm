@@ -71,7 +71,7 @@ Return only valid JSON:
   "tags": ["food","travel","cafe","lifestyle","relationship","citywalk","microdrama","hook-heavy"]
 }`
 
-  const content = [
+  const content: Record<string, unknown>[] = [
     ...params.screenshots.map(image => ({
       type: 'image',
       source: {
@@ -93,7 +93,7 @@ Infer the likely country, content type, place name, place address, and a useful 
     model: 'claude-sonnet-4-20250514',
     max_tokens: 1000,
     system,
-    messages: [{ role: 'user', content }],
+    messages: [{ role: 'user', content }] as any,
   })
 
   const text = response.content.find(block => block.type === 'text')
