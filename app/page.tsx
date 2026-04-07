@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 
 const COUNTRIES: Record<string, string> = {
@@ -110,7 +110,6 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('reel');
   const [image, setImage] = useState<string | null>(null);
-  const [isDrag, setIsDrag] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
   const [linkAutoFilling, setLinkAutoFilling] = useState(false);
@@ -121,12 +120,11 @@ export default function Home() {
   const [showWorldMap, setShowWorldMap] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
-  const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
   const [notif, setNotif] = useState<{ msg: string; type: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [url, setUrl] = useState('');
   const [customTitle, setCustomTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -289,18 +287,22 @@ export default function Home() {
     setSavingNote(null)
   }
 
-  function readFile(file: File) {
-    const r = new FileReader();
-    r.onload = (e) => setImage(e.target!.result as string);
-    r.readAsDataURL(file);
+  async function saveIdeaTitle(id: string, title: string) {
+    const nextTitle = title.trim()
+    if (!nextTitle) {
+      showNotif('題目不可留空', 'error')
+      return
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('ideas').update({ title: nextTitle }).eq('id', id)
+    if (error) {
+      showNotif('更新題目失敗，請重試', 'error')
+      return
+    }
+    setIdeas(prev => prev.map(idea => idea.id === id ? { ...idea, title: nextTitle } : idea))
+    setEditingTitleId(null)
+    showNotif('題目已更新 ✓', 'success')
   }
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDrag(false);
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) readFile(f);
-  }, []);
 
   async function handleSubmit() {
     if (isLoading) return;
@@ -365,7 +367,6 @@ export default function Home() {
       ]);
       showNotif('想法已儲存 ✓', 'success');
       setUrl(''); setCustomTitle(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       setTimeout(() => setStatusSteps(null), 2500);
     } catch (err) {
       console.error(err);
@@ -412,12 +413,7 @@ export default function Home() {
           <span className="brand-label">AI Media Content Creation</span>
           <h1 className="page-title">Idea Collection <em>/ Beta</em></h1>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
-        <button onClick={()=>setShowNotesPanel(true)} style={{fontSize:11,padding:'5px 14px',background:'transparent',color:'var(--text2)',border:'1px solid var(--border2)',borderRadius:'var(--radius)',cursor:'pointer',fontFamily:'var(--sans)',letterSpacing:'0.05em'}}>
-          📋 Notes 總覽
-        </button>
         <div className="header-meta">{ideasLoading ? '載入中...' : `${ideas.length} 個想法已儲存`}</div>
-      </div>
       </header>
 
       <div className="stat-bar">
@@ -499,33 +495,6 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">02</span>
-            <span className="step-label">截圖 / 封面</span>
-            <div
-              className={`upload-zone${isDrag ? ' drag' : ''}`}
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setIsDrag(true); }}
-              onDragLeave={() => setIsDrag(false)}
-              onDrop={handleDrop}
-            >
-              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => { const f = e.target.files?.[0]; if (f) readFile(f); }} />
-              {image
-                ? <img src={image} alt="" style={{ width: '100%', borderRadius: 2, border: '1px solid var(--border)' }} />
-                : <div className="upload-text">Click 上載或拖放截圖<br /><span style={{ fontSize: 10, opacity: 0.6 }}>PNG · JPG · WEBP</span></div>
-              }
-            </div>
-            {image && (
-              <button onClick={() => { setImage(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                × 移除圖片
-              </button>
-            )}
-          </div>
-
-          <div className="divider" />
-
-          <div className="step-block">
-            <span className="step-num">03</span>
             <span className="step-label">自設題目</span>
             <input
               className="field"
@@ -541,7 +510,7 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">04</span>
+            <span className="step-num">03</span>
             <span className="step-label">數據</span>
             <div className="stats-row">
               <div className="stat-block">
@@ -565,7 +534,7 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">05</span>
+            <span className="step-num">04</span>
             <span className="step-label">國家 / 地區</span>
             <select className="field" value={country} onChange={e => setCountry(e.target.value)}>
               <option value="">— 請選擇 —</option>
@@ -589,7 +558,7 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">06</span>
+            <span className="step-num">05</span>
             <span className="step-label">內容類型</span>
             <div className="chips">
               {['reel', 'blog', 'social'].map(t => (
@@ -673,7 +642,7 @@ export default function Home() {
                 <div>題材</div>
                 <div>爆款指數</div>
                 <div>數據</div>
-                <div>來源 / 地區</div>
+                <div>參考影片</div>
                 <div>操作</div>
               </div>
               <div className="idea-list">
@@ -687,14 +656,44 @@ export default function Home() {
                     <div key={idea.id} className="idea-row-group">
                       <div className="idea-row">
                         <div className="idea-main">
-                          {idea.thumb ? (
-                            <img src={idea.thumb} alt="" className="idea-thumb" />
-                          ) : (
-                            <div className="idea-thumb placeholder">SOON</div>
-                          )}
                           <div className="idea-main-copy">
                             {idea.topic && <div className="idea-topic">{idea.topic}</div>}
-                            <div className="idea-title">{idea.title || '未命名'}</div>
+                            {editingTitleId === idea.id ? (
+                              <div className="title-edit-wrap">
+                                <input
+                                  className="field"
+                                  value={titleDrafts[idea.id] ?? idea.title ?? ''}
+                                  onChange={e => setTitleDrafts(prev => ({ ...prev, [idea.id]: e.target.value }))}
+                                  onKeyDown={async e => {
+                                    if (e.key === 'Enter') {
+                                      await saveIdeaTitle(idea.id, titleDrafts[idea.id] ?? idea.title ?? '')
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingTitleId(null)
+                                    }
+                                  }}
+                                />
+                                <div className="title-edit-actions">
+                                  <button className="row-action-btn" onClick={async () => {
+                                    await saveIdeaTitle(idea.id, titleDrafts[idea.id] ?? idea.title ?? '')
+                                  }}>儲存</button>
+                                  <button className="row-action-btn" onClick={() => setEditingTitleId(null)}>取消</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="idea-title-row">
+                                <div className="idea-title">{idea.title || '未命名'}</div>
+                                <button
+                                  className="title-edit-btn"
+                                  onClick={() => {
+                                    setEditingTitleId(idea.id)
+                                    setTitleDrafts(prev => ({ ...prev, [idea.id]: idea.title || '' }))
+                                  }}
+                                >
+                                  編輯
+                                </button>
+                              </div>
+                            )}
                             {idea.summary && <div className="idea-summary">{idea.summary}</div>}
                             <div className="idea-badges">
                               {platform && (
@@ -798,42 +797,6 @@ export default function Home() {
         <div className={`notif show${notif.type ? ' ' + notif.type : ''}`}>{notif.msg}</div>
       )}
 
-      {showNotesPanel && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'flex-end'}} onClick={()=>setShowNotesPanel(false)}>
-          <div style={{width:480,height:'100vh',background:'var(--surface)',borderLeft:'1px solid var(--border2)',overflowY:'auto',padding:'36px 32px',display:'flex',flexDirection:'column',gap:24}} onClick={e=>e.stopPropagation()}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div>
-                <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--text3)'}}>Script Prep</div>
-                <h2 style={{fontFamily:'var(--serif)',fontSize:26,fontWeight:400,color:'var(--text)',marginTop:2}}>Notes 總覽</h2>
-              </div>
-              <button onClick={()=>setShowNotesPanel(false)} style={{background:'none',border:'none',fontSize:20,color:'var(--text3)',cursor:'pointer'}}>×</button>
-            </div>
-            <div style={{height:1,background:'var(--border2)'}}/>
-            {ideas.filter(i => (notes[i.id] !== undefined ? notes[i.id] : i.notes)).map(idea => {
-              const noteContent = notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || '')
-              const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title||'')}&background=${encodeURIComponent(noteContent)}`
-              return (
-                <div key={idea.id} style={{borderBottom:'1px solid var(--border)',paddingBottom:20}}>
-                  <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:8}}>
-                    <div>
-                      <div style={{fontSize:10,fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--text3)',marginBottom:3}}>{idea.topic}</div>
-                      <div style={{fontFamily:'var(--serif)',fontSize:16,fontWeight:500,color:'var(--text)'}}>{idea.title}</div>
-                    </div>
-                    <a href={scriptUrl} target="_blank" rel="noopener" style={{flexShrink:0,fontSize:10,fontWeight:500,letterSpacing:'0.06em',textTransform:'uppercase',padding:'5px 12px',background:'var(--text)',color:'var(--bg)',borderRadius:'var(--radius)',textDecoration:'none',whiteSpace:'nowrap'}}>Script →</a>
-                  </div>
-                  <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.65,background:'var(--surface2)',padding:'10px 12px',borderRadius:'var(--radius)',whiteSpace:'pre-wrap',fontFamily:'var(--sans)'}}>{noteContent}</div>
-                </div>
-              )
-            })}
-            {ideas.filter(i => (notes[i.id] !== undefined ? notes[i.id] : i.notes)).length === 0 && (
-              <div style={{textAlign:'center',padding:'40px 0',color:'var(--text3)'}}>
-                <div style={{fontFamily:'var(--serif)',fontSize:20,fontStyle:'italic',marginBottom:8}}>尚未有 Notes</div>
-                <div style={{fontSize:12}}>喺每張 card 底部嘅 Notes 欄加入筆記</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 }
@@ -859,9 +822,6 @@ header{padding:28px 40px 20px;border-bottom:1px solid var(--border2);display:fle
 .field:focus{border-color:var(--border2);background:var(--surface3)}
 .field::placeholder{color:var(--text3)}
 select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8780' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-.upload-zone{border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:background 0.2s,border-color 0.2s;background:var(--surface2)}
-.upload-zone:hover,.upload-zone.drag{background:var(--surface3);border-color:var(--text3)}
-.upload-text{font-size:12px;color:var(--text3);line-height:1.7}
 .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .stat-block{display:flex;flex-direction:column;gap:6px}
 .stat-label{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
@@ -898,11 +858,14 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .idea-row{display:grid;grid-template-columns:minmax(320px,1.8fr) minmax(180px,0.9fr) minmax(180px,0.9fr) minmax(140px,0.8fr) minmax(180px,0.9fr);gap:16px;padding:16px;background:var(--surface);align-items:center}
 .idea-row:hover{background:var(--surface2)}
 .idea-main{display:flex;align-items:flex-start;gap:14px;min-width:0}
-.idea-thumb{width:90px;height:64px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
-.idea-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:0.12em;color:var(--text3)}
 .idea-main-copy{min-width:0;display:flex;flex-direction:column;gap:5px}
 .idea-topic{font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3)}
+.idea-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .idea-title{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--text);line-height:1.15;letter-spacing:-0.02em}
+.title-edit-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:4px 10px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
+.title-edit-btn:hover{background:var(--surface3);color:var(--text)}
+.title-edit-wrap{display:flex;flex-direction:column;gap:8px}
+.title-edit-actions{display:flex;gap:8px}
 .idea-summary{font-size:12px;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .idea-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
 .idea-score-cell{display:flex;flex-direction:column;gap:10px}
@@ -946,5 +909,5 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .notif.success{border-color:rgba(90,138,106,0.4);color:#3d7a5c}
 .notif.error{border-color:rgba(180,80,60,0.3);color:#a05a3a}
 @media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}.idea-expanded-grid{grid-template-columns:1fr}}
-@media(max-width:860px){.layout{grid-template-columns:1fr}.input-panel{position:static;height:auto}.idea-main{flex-direction:column}.idea-thumb{width:100%;height:180px}}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.input-panel{position:static;height:auto}}
 `;
