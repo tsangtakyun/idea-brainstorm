@@ -12,6 +12,12 @@ const COUNTRIES: Record<string, string> = {
 };
 
 const SCRIPT_GEN_URL = 'https://script-generator-xi.vercel.app';
+const PLATFORM_META: Record<string, { label: string; emoji: string }> = {
+  instagram: { label: 'IG REEL', emoji: '📸' },
+  tiktok: { label: 'TIKTOK', emoji: '🎵' },
+  xiaohongshu: { label: '小紅書', emoji: '📕' },
+  web: { label: 'WEB', emoji: '🌐' },
+};
 
 function fmtNum(n: number) {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -21,6 +27,17 @@ function fmtNum(n: number) {
 function hostOf(url: string) {
   try { return new URL(url.startsWith('http') ? url : 'https://' + url).hostname.replace('www.', ''); }
   catch { return url.slice(0, 40); }
+}
+function inferPlatformFromUrl(url: string) {
+  try {
+    const hostname = new URL(url.startsWith('http') ? url : 'https://' + url).hostname.replace('www.', '');
+    if (hostname.includes('instagram.com')) return 'instagram';
+    if (hostname.includes('tiktok.com')) return 'tiktok';
+    if (hostname.includes('xiaohongshu.com') || hostname.includes('xhslink.com')) return 'xiaohongshu';
+    return 'web';
+  } catch {
+    return '';
+  }
 }
 function computeViralScore(views: number, likes: number, shares: number, aiScore: number) {
   let viewScore = 0
@@ -116,6 +133,7 @@ export default function Home() {
   const [likes, setLikes] = useState('');
   const [shares, setShares] = useState('');
   const [country, setCountry] = useState('');
+  const detectedPlatform = inferPlatformFromUrl(url);
 
   useEffect(() => {
     const fetchIdeas = async () => {
@@ -212,7 +230,7 @@ export default function Home() {
       if (data.desc) setDesc(prev => prev?.trim() ? prev : data.desc);
       if (data.image && !image) setImage(data.image);
 
-      showNotif('連結資料已自動填入 ✓', 'success');
+      showNotif(data.image ? '連結資料已自動填入 ✓' : '已自動填資料，但未搵到封面，建議補截圖', data.image ? 'success' : 'error');
     } catch (err) {
       console.error(err);
       showNotif('自動分析連結失敗，請手動補充', 'error');
@@ -416,6 +434,12 @@ export default function Home() {
                 {linkAutoFilling ? '分析中...' : '✦ 自動分析'}
               </button>
             </div>
+            {detectedPlatform && (
+              <div style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{PLATFORM_META[detectedPlatform]?.emoji || '🌐'}</span>
+                <span>已偵測平台：{PLATFORM_META[detectedPlatform]?.label || detectedPlatform}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="field" placeholder="店鋪 / 品牌名稱"
                 value={placeName} onChange={e => setPlaceName(e.target.value)}
@@ -611,10 +635,16 @@ export default function Home() {
                   const vs = idea.viralScore || 0;
                   const viralColor = vs >= 70 ? '#7a5a2a' : vs >= 40 ? '#3d7a5c' : '#5a6a8a';
                   const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || ''))}`;
+                  const platform = inferPlatformFromUrl(idea.url || '');
                   return (
                     <div key={idea.id} className="card">
                       <div className="card-head">
                         <div className="card-badges">
+                          {platform && (
+                            <span className="badge badge-country">
+                              {PLATFORM_META[platform]?.emoji || '🌐'} {PLATFORM_META[platform]?.label || platform}
+                            </span>
+                          )}
                           <span className={`badge ${typeBadge[idea.type] || 'badge-reel'}`}>{typeLabel[idea.type] || idea.type}</span>
                           {idea.country && <span className="badge badge-country">{COUNTRIES[idea.country] || idea.country}</span>}
                         </div>
