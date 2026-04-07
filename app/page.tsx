@@ -96,6 +96,7 @@ export default function Home() {
   const [isDrag, setIsDrag] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [linkAutoFilling, setLinkAutoFilling] = useState(false);
   const [placeName, setPlaceName] = useState('');
   const [placeAddress, setPlaceAddress] = useState('');
   const [placeLat, setPlaceLat] = useState<number | null>(null);
@@ -185,6 +186,38 @@ export default function Home() {
       showNotif('搜尋失敗，請手動填寫', 'error');
     }
     setAutoFilling(false);
+  }
+
+  async function autoFillFromLink() {
+    if (!url.trim()) {
+      showNotif('請先貼上連結', 'error');
+      return;
+    }
+
+    setLinkAutoFilling(true);
+    try {
+      const res = await fetch('/api/autofill-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `API ${res.status}`);
+
+      setUrl(data.url || url);
+      if (data.contentType) setSelectedType(data.contentType);
+      if (data.country) setCountry(data.country);
+      if (data.placeName && !placeName) setPlaceName(data.placeName);
+      if (data.placeAddress && !placeAddress) setPlaceAddress(data.placeAddress);
+      if (data.desc) setDesc(prev => prev?.trim() ? prev : data.desc);
+      if (data.image && !image) setImage(data.image);
+
+      showNotif('連結資料已自動填入 ✓', 'success');
+    } catch (err) {
+      console.error(err);
+      showNotif('自動分析連結失敗，請手動補充', 'error');
+    }
+    setLinkAutoFilling(false);
   }
 
   async function saveIdeaToSupabase(idea: any) {
@@ -361,8 +394,28 @@ export default function Home() {
           <div className="step-block">
             <span className="step-num">01</span>
             <span className="step-label">URL / Link</span>
-            <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
-              value={url} onChange={e => setUrl(e.target.value)} />
+            <div style={{ position: 'relative' }}>
+              <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
+                value={url} onChange={e => setUrl(e.target.value)}
+                style={{ paddingRight: 118 }} />
+              <button
+                onClick={autoFillFromLink}
+                disabled={linkAutoFilling || !url.trim()}
+                style={{
+                  position: 'absolute', top: 7, right: 8,
+                  fontSize: 10, padding: '6px 10px',
+                  background: 'var(--text)', color: 'var(--bg)',
+                  border: 'none', borderRadius: 'var(--radius)',
+                  cursor: linkAutoFilling || !url.trim() ? 'not-allowed' : 'pointer',
+                  opacity: !url.trim() ? 0.4 : 1,
+                  fontFamily: 'var(--sans)',
+                  letterSpacing: '0.05em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {linkAutoFilling ? '分析中...' : '✦ 自動分析'}
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="field" placeholder="店鋪 / 品牌名稱"
                 value={placeName} onChange={e => setPlaceName(e.target.value)}
