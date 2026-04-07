@@ -1,8 +1,9 @@
+import Link from 'next/link'
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "SOON · Idea Collection",
-  description: "AI-powered idea brainstorm collection by SOON",
+  description: "SOON campaign workspace and idea system",
 };
 
 function NavBar() {
@@ -22,16 +23,35 @@ function NavBar() {
       height: '52px',
       fontFamily: 'EB Garamond, serif',
     }}>
-      <span style={{ fontSize: '13px', letterSpacing: '0.15em', color: '#888' }}>
+      <Link href="/" style={{ fontSize: '13px', letterSpacing: '0.15em', color: '#888', textDecoration: 'none' }}>
         SOON
-      </span>
+      </Link>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <a href="https://idea-brainstorm.vercel.app" style={{
+        <Link href="/submit-brief" style={{
           fontSize: '13px',
           color: '#1a1a1a',
           textDecoration: 'none',
           padding: '6px 14px',
           borderBottom: '1px solid #1a1a1a',
+          letterSpacing: '0.03em',
+        }}>
+          Campaign Submit
+        </Link>
+        <Link href="/ops/campaigns" style={{
+          fontSize: '13px',
+          color: '#1a1a1a',
+          textDecoration: 'none',
+          padding: '6px 14px',
+          borderBottom: '1px solid #1a1a1a',
+          letterSpacing: '0.03em',
+        }}>
+          Ops Workspace
+        </Link>
+        <a href="https://idea-brainstorm.vercel.app" style={{
+          fontSize: '13px',
+          color: '#1a1a1a',
+          textDecoration: 'none',
+          padding: '6px 14px',
           letterSpacing: '0.03em',
         }}>
           💡 題材庫 Idea Collection
