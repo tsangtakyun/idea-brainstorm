@@ -54,7 +54,7 @@ function NavBar() {
         }}>
           🎬 分鏡指引 Shooting Guideline
         </a>
-        <a href="https://soon-strategy-library.vercel.app/strategy-library" style={{
+        <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={{
           fontSize: '13px',
           color: '#888',
           textDecoration: 'none',
