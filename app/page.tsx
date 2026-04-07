@@ -411,7 +411,7 @@ export default function Home() {
       <header>
         <div className="header-left">
           <span className="brand-label">AI Media Content Creation</span>
-          <h1 className="page-title">Idea Collection <em>/ Beta</em></h1>
+          <h1 className="page-title">IG reel Idea Collection <em>/ Beta</em></h1>
         </div>
         <div className="header-meta">{ideasLoading ? '載入中...' : `${ideas.length} 個想法已儲存`}</div>
       </header>
