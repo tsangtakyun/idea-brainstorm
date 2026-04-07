@@ -227,7 +227,12 @@ export default function Home() {
       if (data.country) setCountry(data.country);
       if (data.placeName && !placeName) setPlaceName(data.placeName);
       if (data.placeAddress && !placeAddress) setPlaceAddress(data.placeAddress);
-      if (data.desc) setDesc(prev => prev?.trim() ? prev : data.desc);
+      if (data.desc) {
+        const tagSummary = Array.isArray(data.tags) && data.tags.length > 0
+          ? `\n\nAI tags：${data.tags.join(' / ')}`
+          : '';
+        setDesc(prev => prev?.trim() ? prev : `${data.desc}${tagSummary}`);
+      }
       if (data.image && !image) setImage(data.image);
 
       showNotif(data.image ? '連結資料已自動填入 ✓' : '已自動填資料，但未搵到封面，建議補截圖', data.image ? 'success' : 'error');

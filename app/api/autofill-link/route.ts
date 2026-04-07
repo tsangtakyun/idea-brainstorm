@@ -103,7 +103,8 @@ Return only valid JSON:
   "contentType": "reel | blog | social",
   "placeName": "shop / brand / venue name if any, else empty string",
   "placeAddress": "address / district / city if inferable, else empty string",
-  "desc": "2-3 sentences in Traditional Chinese, concise, explaining what this content seems to be and why it may work for HK audience"
+  "desc": "2-3 sentences in Traditional Chinese, concise, explaining what this content seems to be and why it may work for HK audience",
+  "tags": ["food","travel","cafe","lifestyle","relationship","citywalk","microdrama","hook-heavy"]
 }`
 
   const user = `URL: ${params.url}
@@ -132,6 +133,9 @@ Infer the most likely country/region and content type. If there is a place, shop
     placeName: typeof parsed.placeName === 'string' ? parsed.placeName.trim() : '',
     placeAddress: typeof parsed.placeAddress === 'string' ? parsed.placeAddress.trim() : '',
     desc: typeof parsed.desc === 'string' ? parsed.desc.trim() : '',
+    tags: Array.isArray(parsed.tags)
+      ? parsed.tags.filter((tag: unknown) => typeof tag === 'string').map((tag: string) => tag.trim()).filter(Boolean).slice(0, 6)
+      : [],
   }
 }
 
@@ -162,6 +166,7 @@ export async function POST(req: NextRequest) {
       placeName: aiFields?.placeName || '',
       placeAddress: aiFields?.placeAddress || '',
       desc: aiFields?.desc || metadata?.description || '',
+      tags: aiFields?.tags || [],
       image: metadata?.image || '',
       title: metadata?.title || '',
       metadataDescription: metadata?.description || '',
