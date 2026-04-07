@@ -114,7 +114,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
   const [linkAutoFilling, setLinkAutoFilling] = useState(false);
-  const [browserAssistLoading, setBrowserAssistLoading] = useState(false);
   const [placeName, setPlaceName] = useState('');
   const [placeAddress, setPlaceAddress] = useState('');
   const [placeLat, setPlaceLat] = useState<number | null>(null);
@@ -246,43 +245,6 @@ export default function Home() {
       showNotif('自動分析連結失敗，請手動補充', 'error');
     }
     setLinkAutoFilling(false);
-  }
-
-  async function browserAssistFill() {
-    if (!url.trim()) {
-      showNotif('請先貼上連結', 'error');
-      return;
-    }
-
-    setBrowserAssistLoading(true);
-    try {
-      const res = await fetch('/api/browser-assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `API ${res.status}`);
-
-      setUrl(data.url || url);
-      if (data.contentType) setSelectedType(data.contentType);
-      if (data.country) setCountry(data.country);
-      if (data.placeName) setPlaceName(data.placeName);
-      if (data.placeAddress) setPlaceAddress(data.placeAddress);
-      if (data.desc) {
-        const tagSummary = Array.isArray(data.tags) && data.tags.length > 0
-          ? `\n\nAI tags：${data.tags.join(' / ')}`
-          : '';
-        setDesc(`${data.desc}${tagSummary}`);
-      }
-      if (data.image) setImage(data.image);
-
-      showNotif(data.warning || '已完成進階擷取，請記得 double check', 'success');
-    } catch (err) {
-      console.error(err);
-      showNotif(err instanceof Error ? err.message : '進階擷取失敗，請稍後再試或改用截圖', 'error');
-    }
-    setBrowserAssistLoading(false);
   }
 
   async function saveIdeaToSupabase(idea: any) {
@@ -462,12 +424,12 @@ export default function Home() {
             <div style={{ position: 'relative' }}>
               <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…"
                 value={url} onChange={e => setUrl(e.target.value)}
-                style={{ paddingRight: 216 }} />
+                style={{ paddingRight: 112 }} />
               <button
                 onClick={autoFillFromLink}
                 disabled={linkAutoFilling || !url.trim()}
                 style={{
-                  position: 'absolute', top: 7, right: 96,
+                  position: 'absolute', top: 7, right: 8,
                   fontSize: 10, padding: '6px 10px',
                   background: 'var(--text)', color: 'var(--bg)',
                   border: 'none', borderRadius: 'var(--radius)',
@@ -480,23 +442,6 @@ export default function Home() {
               >
                 {linkAutoFilling ? '分析中...' : '✦ 自動分析'}
               </button>
-              <button
-                onClick={browserAssistFill}
-                disabled={browserAssistLoading || !url.trim()}
-                style={{
-                  position: 'absolute', top: 7, right: 8,
-                  fontSize: 10, padding: '6px 10px',
-                  background: 'var(--surface3)', color: 'var(--text)',
-                  border: '1px solid var(--border2)', borderRadius: 'var(--radius)',
-                  cursor: browserAssistLoading || !url.trim() ? 'not-allowed' : 'pointer',
-                  opacity: !url.trim() ? 0.4 : 1,
-                  fontFamily: 'var(--sans)',
-                  letterSpacing: '0.05em',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {browserAssistLoading ? '擷取中...' : '🖼 進階擷取'}
-              </button>
             </div>
             {detectedPlatform && (
               <div style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -505,7 +450,7 @@ export default function Home() {
               </div>
             )}
             <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
-              🖼 進階擷取會喺後台開頁、盡量展開更多內容再用 AI 視覺分析。結果可能有錯，請 double check。
+              平台如果限制 metadata，請直接上載截圖或封面。AI 會根據 link + 截圖預填資料，但仍然可能有錯，請 double check。
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="field" placeholder="店鋪 / 品牌名稱"
