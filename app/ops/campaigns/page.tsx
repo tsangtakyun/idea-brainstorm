@@ -153,10 +153,10 @@ export default function OpsCampaignsPage() {
           }}>
             <div style={{ fontSize: '12px', letterSpacing: '0.14em', color: '#887b68', marginBottom: '10px' }}>CONNECTED MODULES</div>
             <div style={{ display: 'grid', gap: '8px', fontSize: '15px', lineHeight: 1.65, color: '#4e483f' }}>
-              <div>`idea-brainstorm` -> brief enrichment / campaign angles</div>
-              <div>`script-generator` -> campaign script draft</div>
-              <div>`soon-storyboard` -> storyboard and shot plan</div>
-              <div>`soon-video-generator` -> later visual preview / concept frame</div>
+              <div><code>idea-brainstorm</code>{' -> '}brief enrichment / campaign angles</div>
+              <div><code>script-generator</code>{' -> '}campaign script draft</div>
+              <div><code>soon-storyboard</code>{' -> '}storyboard and shot plan</div>
+              <div><code>soon-video-generator</code>{' -> '}later visual preview / concept frame</div>
             </div>
           </div>
 
