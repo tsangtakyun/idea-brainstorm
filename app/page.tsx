@@ -235,7 +235,11 @@ export default function Home() {
       }
       if (data.image && !image) setImage(data.image);
 
-      showNotif(data.image ? '連結資料已自動填入 ✓' : '已自動填資料，但未搵到封面，建議補截圖', data.image ? 'success' : 'error');
+      if (data.metadataBlocked) {
+        showNotif('平台限制，未能直接讀到內容資料；建議補截圖或描述', 'error');
+      } else {
+        showNotif(data.image ? '連結資料已自動填入 ✓' : '已自動填資料，但未搵到封面，建議補截圖', data.image ? 'success' : 'error');
+      }
     } catch (err) {
       console.error(err);
       showNotif('自動分析連結失敗，請手動補充', 'error');

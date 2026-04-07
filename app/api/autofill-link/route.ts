@@ -29,6 +29,18 @@ function inferType(platform: string) {
   return 'social'
 }
 
+function buildMetadataBlockedDesc(platform: string) {
+  const platformLabel = platform === 'instagram'
+    ? 'Instagram Reel'
+    : platform === 'tiktok'
+      ? 'TikTok'
+      : platform === 'xiaohongshu'
+        ? '小紅書'
+        : '呢條連結'
+
+  return `${platformLabel} 呢類連結經常攔截公開 metadata，所以目前未能直接讀到標題、描述或封面。建議你補一張截圖，或者手動寫一兩句內容重點，我先可以更準確判斷地區、題材同爆點。`
+}
+
 function extractMeta(html: string, key: string) {
   const regexes = [
     new RegExp(`<meta[^>]+property=["']${key}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
@@ -150,13 +162,20 @@ export async function POST(req: NextRequest) {
     const parsedUrl = new URL(normalizedUrl)
     const platform = inferPlatform(parsedUrl.hostname.replace('www.', ''))
     const metadata = await fetchMetadata(normalizedUrl)
+    const metadataBlocked = !metadata?.title && !metadata?.description && !metadata?.image
 
-    const aiFields = await inferFields({
-      url: normalizedUrl,
-      platform,
-      title: metadata?.title || '',
-      description: metadata?.description || '',
-    })
+    const aiFields = metadataBlocked
+      ? null
+      : await inferFields({
+          url: normalizedUrl,
+          platform,
+          title: metadata?.title || '',
+          description: metadata?.description || '',
+        })
+
+    const fallbackTags = platform === 'instagram' || platform === 'tiktok' || platform === 'xiaohongshu'
+      ? ['reel', platform]
+      : ['social']
 
     return NextResponse.json({
       url: normalizedUrl,
@@ -165,11 +184,12 @@ export async function POST(req: NextRequest) {
       country: aiFields?.country || '',
       placeName: aiFields?.placeName || '',
       placeAddress: aiFields?.placeAddress || '',
-      desc: aiFields?.desc || metadata?.description || '',
-      tags: aiFields?.tags || [],
+      desc: aiFields?.desc || metadata?.description || (metadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
+      tags: aiFields?.tags || fallbackTags,
       image: metadata?.image || '',
       title: metadata?.title || '',
       metadataDescription: metadata?.description || '',
+      metadataBlocked,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
