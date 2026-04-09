@@ -6,6 +6,11 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '').split(',').map(e => e.
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next()
+  const creatorMode = request.nextUrl.searchParams.get('creator_mode')
+
+  if (creatorMode === '1') {
+    response.cookies.set('soon_creator_mode', '1', { path: '/', sameSite: 'lax' })
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
