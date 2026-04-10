@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { cookies } from 'next/headers'
 
 export const metadata: Metadata = {
-  title: "SOON · Idea Collection",
-  description: "AI-powered idea brainstorm collection by SOON",
+  title: "SOON · 題材工作台",
+  description: "SOON 內部題材工作台，集中管理靈感、爆款分析與腳本前期資料。",
 };
 
 function NavBar({ creatorMode }: { creatorMode: boolean }) {
@@ -14,69 +14,91 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       left: 0,
       right: 0,
       zIndex: 1000,
-      backgroundColor: '#F5F2EC',
-      borderBottom: '1px solid #e0ddd6',
+      background: 'linear-gradient(180deg, #21253f 0%, #1d2137 100%)',
+      borderBottom: '1px solid rgba(255,255,255,0.08)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 32px',
-      height: '52px',
-      fontFamily: 'EB Garamond, serif',
+      padding: '0 24px',
+      height: '60px',
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      boxShadow: '0 10px 24px rgba(4,6,15,0.28)',
     }}>
-      <span style={{ fontSize: '13px', letterSpacing: '0.15em', color: '#888' }}>
-        SOON
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#ff5d36', display: 'inline-block' }} />
+          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#7b61ff', display: 'inline-block' }} />
+          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#3b82f6', display: 'inline-block' }} />
+        </div>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: '#f8faff', letterSpacing: '-0.02em' }}>
+          SOON 內部工作台
+        </span>
+      </div>
+
       {creatorMode ? (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <a href="https://soon-creator-network.vercel.app/creator-workspace" style={{
             fontSize: '13px',
-            color: '#1a1a1a',
+            color: '#f8faff',
             textDecoration: 'none',
-            padding: '6px 14px',
-            borderBottom: '1px solid #1a1a1a',
-            letterSpacing: '0.03em',
+            padding: '10px 16px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.05)',
+            letterSpacing: '0.01em',
           }}>
             返回 Creator Dashboard
           </a>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <a href="https://idea-brainstorm.vercel.app" style={{
             fontSize: '13px',
-            color: '#1a1a1a',
+            color: '#f8faff',
             textDecoration: 'none',
-            padding: '6px 14px',
-            borderBottom: '1px solid #1a1a1a',
-            letterSpacing: '0.03em',
+            padding: '10px 14px',
+            borderRadius: '14px',
+            background: 'rgba(123,97,255,0.18)',
+            border: '1px solid rgba(123,97,255,0.3)',
+            letterSpacing: '0.01em',
           }}>
-            💡 題材庫 Idea Collection
+            題材工作台
           </a>
           <a href="https://script-generator-xi.vercel.app" style={{
             fontSize: '13px',
-            color: '#888',
+            color: 'rgba(235,239,255,0.76)',
             textDecoration: 'none',
-            padding: '6px 14px',
-            letterSpacing: '0.03em',
+            padding: '10px 14px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.04)',
+            letterSpacing: '0.01em',
           }}>
-            📝 劇本生成 Script Generator
+            劇本生成
           </a>
           <a href="https://soon-storyboard.vercel.app/storyboard" style={{
             fontSize: '13px',
-            color: '#888',
+            color: 'rgba(235,239,255,0.76)',
             textDecoration: 'none',
-            padding: '6px 14px',
-            letterSpacing: '0.03em',
+            padding: '10px 14px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.04)',
+            letterSpacing: '0.01em',
           }}>
-            🎬 分鏡指引 Shooting Guideline
+            分鏡指引
           </a>
           <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={{
             fontSize: '13px',
-            color: '#888',
+            color: 'rgba(235,239,255,0.76)',
             textDecoration: 'none',
-            padding: '6px 14px',
-            letterSpacing: '0.03em',
+            padding: '10px 14px',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.04)',
+            letterSpacing: '0.01em',
           }}>
-            📚 Marketing Strategy Library
+            策略資料庫
           </a>
         </div>
       )}
@@ -94,7 +116,7 @@ export default async function RootLayout({
 
   return (
     <html lang="zh-HK">
-      <body style={{ margin: 0, padding: 0, paddingTop: '52px' }}>
+      <body style={{ margin: 0, padding: 0, paddingTop: '60px', background: '#15192c' }}>
         <NavBar creatorMode={creatorMode} />
         {children}
       </body>
