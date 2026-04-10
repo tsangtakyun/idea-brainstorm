@@ -37,14 +37,26 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       boxShadow: '0 10px 24px rgba(4,6,15,0.28)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#ff5d36', display: 'inline-block' }} />
-          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#7b61ff', display: 'inline-block' }} />
-          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#3b82f6', display: 'inline-block' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '8px 10px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: '#f8faff',
+          fontSize: '13px',
+          fontWeight: 800,
+          letterSpacing: '0.12em',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+        }}>
+          SOON
         </div>
         <span style={{ fontSize: '14px', fontWeight: 700, color: '#f8faff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
-          SOON Internal
+          Internal
         </span>
       </div>
 

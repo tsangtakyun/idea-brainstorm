@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
 
 const COUNTRIES: Record<string, string> = {
@@ -132,7 +132,12 @@ export default function Home() {
   const [likes, setLikes] = useState('');
   const [shares, setShares] = useState('');
   const [country, setCountry] = useState('');
+  const [activeNav, setActiveNav] = useState<'home' | 'work' | 'board' | 'analysis'>('home');
   const detectedPlatform = inferPlatformFromUrl(url);
+  const homeRef = useRef<HTMLElement | null>(null);
+  const workRef = useRef<HTMLElement | null>(null);
+  const boardRef = useRef<HTMLElement | null>(null);
+  const analysisRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const fetchIdeas = async () => {
@@ -404,6 +409,16 @@ export default function Home() {
     filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' 的想法' :
     { reel: 'IG Reel', blog: '文章 / Blog', social: 'Social Post' }[filter] || filter;
 
+  function jumpTo(section: 'home' | 'work' | 'board' | 'analysis') {
+    setActiveNav(section);
+    const target =
+      section === 'home' ? homeRef.current :
+      section === 'work' ? workRef.current :
+      section === 'board' ? boardRef.current :
+      analysisRef.current;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <>
       <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -412,18 +427,18 @@ export default function Home() {
       <div className="workspace-shell">
         <aside className="sidebar">
           <div className="sidebar-top">
-            <div className="workspace-chip">
-              <span className="workspace-chip-dot" />
+            <button className="workspace-chip" onClick={() => jumpTo('home')} type="button">
+              <span className="workspace-chip-logo">SOON</span>
               <span>Idea Brainstorm</span>
-            </div>
+            </button>
             <div className="workspace-sub">SOON 內部題材系統</div>
           </div>
 
           <div className="sidebar-nav">
-            <button className="sidebar-nav-item active">首頁</button>
-            <button className="sidebar-nav-item">我的工作</button>
-            <button className="sidebar-nav-item">題材板</button>
-            <button className="sidebar-nav-item">近期分析</button>
+            <button className={`sidebar-nav-item${activeNav === 'home' ? ' active' : ''}`} onClick={() => jumpTo('home')} type="button">首頁</button>
+            <button className={`sidebar-nav-item${activeNav === 'work' ? ' active' : ''}`} onClick={() => jumpTo('work')} type="button">我的工作</button>
+            <button className={`sidebar-nav-item${activeNav === 'board' ? ' active' : ''}`} onClick={() => jumpTo('board')} type="button">題材板</button>
+            <button className={`sidebar-nav-item${activeNav === 'analysis' ? ' active' : ''}`} onClick={() => jumpTo('analysis')} type="button">近期分析</button>
           </div>
 
           <div className="sidebar-section-title">快速輸入</div>
@@ -600,7 +615,7 @@ export default function Home() {
             </div>
           </div>
 
-          <section className="hero-row">
+          <section className="hero-row" ref={homeRef}>
             <div className="hero-card hero-card-primary">
               <div className="hero-eyebrow">今日概況</div>
               <div className="hero-title">集中管理連結、AI 分析與題材方向，讓前期研究更像真正工作台。</div>
@@ -615,7 +630,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="board-toolbar">
+          <section className="board-toolbar" ref={boardRef}>
             <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
             <div className="controls">
               <input className="search-field" placeholder="搜尋題目、主題、標籤…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -651,7 +666,7 @@ export default function Home() {
           </div>
 
           <div className="content-grid">
-            <section className="board-panel">
+            <section className="board-panel" ref={workRef}>
               {ideasLoading ? (
                 <div className="empty-state">
                   <div className="empty-title">載入中...</div>
@@ -815,7 +830,7 @@ export default function Home() {
               )}
             </section>
 
-            <aside className="right-rail">
+            <aside className="right-rail" ref={analysisRef}>
               <div className="rail-card">
                 <div className="rail-eyebrow">精選摘要</div>
                 <div className="rail-title">{topIdea?.title || '等待第一個題材進入系統'}</div>
@@ -858,8 +873,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 .workspace-shell{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:calc(100vh - 60px);background:radial-gradient(circle at top right, rgba(123,97,255,0.14), transparent 28%),linear-gradient(180deg,#171b31 0%, #14182a 100%)}
 .sidebar{background:linear-gradient(180deg,#1f2340 0%,#1b2038 100%);border-right:1px solid var(--border);padding:22px 18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
 .sidebar-top{padding:10px 8px 2px}
-.workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;font-weight:500}
-.workspace-chip-dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,#7b61ff,#4b89ff)}
+.workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:13px;font-weight:500;color:var(--text);cursor:pointer}
+.workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:10px;background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));border:1px solid rgba(255,255,255,0.08);font-size:10px;font-weight:800;letter-spacing:0.12em;line-height:1}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
 .sidebar-nav{display:grid;gap:6px}
 .sidebar-nav-item{padding:11px 14px;border:none;border-radius:12px;background:transparent;color:var(--text3);text-align:left;font-family:var(--sans);font-size:13px;cursor:pointer}
