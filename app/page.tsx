@@ -532,7 +532,7 @@ export default function Home() {
                 <input className="field" type="number" min="0" placeholder="例：36000" value={likes} onChange={e => setLikes(e.target.value)} />
               </div>
               <div className="stat-block">
-                <span className="stat-label stat-label-ghost" aria-hidden="true">Shares / Saves</span>
+                <span className="stat-label">Save</span>
                 <input className="field" type="number" min="0" placeholder="例：48000" value={shares} onChange={e => setShares(e.target.value)} />
               </div>
             </div>
@@ -767,12 +767,13 @@ export default function Home() {
                               </div>
                               <div className="metric-box">
                                 <div className="metric-value">{fmtNum(idea.shares || 0)}</div>
-                                <div className="metric-key">Shares</div>
+                                <div className="metric-key">Save</div>
                               </div>
                             </div>
 
                             <div className="idea-meta">
                               {idea.url && <a className="video-link-btn" href={idea.url} target="_blank" rel="noopener">{PLATFORM_META[platform]?.label || '影片'} →</a>}
+                              <a className="btn-script btn-script-meta" href={scriptUrl} target="_blank" rel="noopener">推上劇本生成</a>
                               {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
                               <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
                             </div>
@@ -781,7 +782,6 @@ export default function Home() {
                               <button onClick={()=>setExpandedNotes(prev=>({...prev,[idea.id]:!prev[idea.id]}))} className="row-action-btn">
                                 {expandedNotes[idea.id] ? '▴ 收起詳情' : '▾ 詳情'}
                               </button>
-                              <a className="btn-script" href={scriptUrl} target="_blank" rel="noopener">推上劇本生成</a>
                               <button className="card-delete row-delete" onClick={async () => {
                                 setIdeas(prev => prev.filter(i => i.id !== idea.id));
                                 await deleteIdeaFromSupabase(idea.id);
@@ -1004,9 +1004,9 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .card-source{font-size:10px;color:var(--text3);word-break:break-all;text-decoration:none;display:block}
 .card-source:hover{color:var(--text2)}
 .card-date{font-size:10px;color:var(--text3);font-weight:300}
-.stat-label-ghost{opacity:0}
 .btn-script{display:inline-flex;align-items:center;justify-content:center;min-height:34px;font-size:11px;font-weight:600;letter-spacing:0.02em;padding:7px 14px;background:linear-gradient(135deg,#6f6bff 0%,#8f7cff 100%);border:1px solid rgba(167,156,255,0.65);color:#f7f7ff;border-radius:12px;cursor:pointer;text-decoration:none;transition:all 0.15s;box-shadow:0 10px 28px rgba(111,107,255,0.22)}
 .btn-script:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(111,107,255,0.28);filter:brightness(1.03)}
+.btn-script-meta{white-space:nowrap}
 .hook-quote{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text2);padding:10px 14px;border-left:2px solid rgba(123,97,255,0.42);background:rgba(255,255,255,0.04);border-radius:0 14px 14px 0;line-height:1.5}
 .notif{position:fixed;bottom:28px;right:28px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-md);padding:12px 20px;font-size:12px;color:var(--text);box-shadow:0 12px 28px rgba(0,0,0,0.24);z-index:999;transform:translateY(60px);opacity:0;transition:all 0.3s cubic-bezier(.16,1,.3,1);pointer-events:none;font-weight:300}
 .notif.show{transform:translateY(0);opacity:1}
