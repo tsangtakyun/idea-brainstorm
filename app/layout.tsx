@@ -48,48 +48,41 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
         </span>
       </div>
 
-      {creatorMode ? (
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <a href="https://idea-brainstorm.vercel.app" style={{
+          fontSize: '12px',
+          color: '#f8faff',
+          textDecoration: 'none',
+          padding: '9px 12px',
+          borderRadius: '12px',
+          background: 'rgba(123,97,255,0.18)',
+          border: '1px solid rgba(123,97,255,0.3)',
+          letterSpacing: '0.01em',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}>
+          題材
+        </a>
+        <a href="https://script-generator-xi.vercel.app" style={quickLinkStyle}>
+          劇本
+        </a>
+        <a href="https://soon-storyboard.vercel.app/storyboard" style={quickLinkStyle}>
+          分鏡
+        </a>
+        <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={quickLinkStyle}>
+          策略
+        </a>
+        {creatorMode && (
           <a href="https://soon-creator-network.vercel.app/creator-workspace" style={{
-            fontSize: '13px',
-            color: '#f8faff',
-            textDecoration: 'none',
-            padding: '10px 16px',
-            borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.05)',
-            letterSpacing: '0.01em',
+            ...quickLinkStyle,
+            padding: '9px 14px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.14)',
           }}>
-            返回 Creator Dashboard
+            Creator Dashboard
           </a>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-          <a href="https://idea-brainstorm.vercel.app" style={{
-            fontSize: '12px',
-            color: '#f8faff',
-            textDecoration: 'none',
-            padding: '9px 12px',
-            borderRadius: '12px',
-            background: 'rgba(123,97,255,0.18)',
-            border: '1px solid rgba(123,97,255,0.3)',
-            letterSpacing: '0.01em',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}>
-            題材
-          </a>
-          <a href="https://script-generator-xi.vercel.app" style={quickLinkStyle}>
-            劇本
-          </a>
-          <a href="https://soon-storyboard.vercel.app/storyboard" style={quickLinkStyle}>
-            分鏡
-          </a>
-          <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={quickLinkStyle}>
-            策略
-          </a>
-        </div>
-      )}
+        )}
+      </div>
     </nav>
   )
 }
