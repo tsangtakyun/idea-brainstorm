@@ -7,6 +7,19 @@ export const metadata: Metadata = {
 };
 
 function NavBar({ creatorMode }: { creatorMode: boolean }) {
+  const quickLinkStyle = {
+    fontSize: '12px',
+    color: 'rgba(235,239,255,0.82)',
+    textDecoration: 'none',
+    padding: '9px 12px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.04)',
+    letterSpacing: '0.01em',
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
+  }
+
   return (
     <nav style={{
       position: 'fixed',
@@ -24,14 +37,14 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
       boxShadow: '0 10px 24px rgba(4,6,15,0.28)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
         <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#ff5d36', display: 'inline-block' }} />
           <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#7b61ff', display: 'inline-block' }} />
           <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: '#3b82f6', display: 'inline-block' }} />
         </div>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: '#f8faff', letterSpacing: '-0.02em' }}>
-          SOON 內部工作台
+        <span style={{ fontSize: '14px', fontWeight: 700, color: '#f8faff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+          SOON Internal
         </span>
       </div>
 
@@ -51,54 +64,29 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
           </a>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
           <a href="https://idea-brainstorm.vercel.app" style={{
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#f8faff',
             textDecoration: 'none',
-            padding: '10px 14px',
-            borderRadius: '14px',
+            padding: '9px 12px',
+            borderRadius: '12px',
             background: 'rgba(123,97,255,0.18)',
             border: '1px solid rgba(123,97,255,0.3)',
             letterSpacing: '0.01em',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}>
-            題材工作台
+            題材
           </a>
-          <a href="https://script-generator-xi.vercel.app" style={{
-            fontSize: '13px',
-            color: 'rgba(235,239,255,0.76)',
-            textDecoration: 'none',
-            padding: '10px 14px',
-            borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.04)',
-            letterSpacing: '0.01em',
-          }}>
-            劇本生成
+          <a href="https://script-generator-xi.vercel.app" style={quickLinkStyle}>
+            劇本
           </a>
-          <a href="https://soon-storyboard.vercel.app/storyboard" style={{
-            fontSize: '13px',
-            color: 'rgba(235,239,255,0.76)',
-            textDecoration: 'none',
-            padding: '10px 14px',
-            borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.04)',
-            letterSpacing: '0.01em',
-          }}>
-            分鏡指引
+          <a href="https://soon-storyboard.vercel.app/storyboard" style={quickLinkStyle}>
+            分鏡
           </a>
-          <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={{
-            fontSize: '13px',
-            color: 'rgba(235,239,255,0.76)',
-            textDecoration: 'none',
-            padding: '10px 14px',
-            borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.04)',
-            letterSpacing: '0.01em',
-          }}>
-            策略資料庫
+          <a href="https://soon-campaign-workspace-7kwt.vercel.app/strategy-library" style={quickLinkStyle}>
+            策略
           </a>
         </div>
       )}
