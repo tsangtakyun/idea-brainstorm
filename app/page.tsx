@@ -141,12 +141,18 @@ export default function Home() {
 
   useEffect(() => {
     const fetchIdeas = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('ideas')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (!error && data) {
+      const res = await fetch('/api/ideas')
+      const payload = await res.json()
+      const data = Array.isArray(payload.ideas) ? payload.ideas : []
+
+      if (!res.ok) {
+        setIdeas([])
+        setNotes({})
+        setIdeasLoading(false)
+        showNotif(payload.error || '讀取 ideas 失敗', 'error')
+        return
+      }
+      if (data) {
         setIdeas(data.map((d: any) => ({
           id: d.id,
           type: d.type,
