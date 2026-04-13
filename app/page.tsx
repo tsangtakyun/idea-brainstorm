@@ -139,41 +139,66 @@ export default function Home() {
   const boardRef = useRef<HTMLElement | null>(null);
   const analysisRef = useRef<HTMLElement | null>(null);
 
+  function normalizeIdeas(data: any[]) {
+    return data.map((d: any) => ({
+      id: d.id,
+      type: d.type,
+      url: d.url,
+      thumb: d.thumb,
+      views: d.views,
+      likes: d.likes,
+      shares: d.shares,
+      country: d.country,
+      date: d.date,
+      title: d.title,
+      topic: d.topic,
+      summary: d.summary,
+      tags: d.tags || [],
+      viralScore: d.viral_score,
+      aiViralBase: d.ai_viral_base,
+      scriptHook: d.script_hook,
+      lat: d.lat ?? null,
+      lng: d.lng ?? null,
+      notes: d.notes ?? null,
+    }))
+  }
+
   useEffect(() => {
     const fetchIdeas = async () => {
-      const res = await fetch('/api/ideas')
-      const payload = await res.json()
-      const data = Array.isArray(payload.ideas) ? payload.ideas : []
+      let data: any[] = []
 
-      if (!res.ok) {
+      try {
+        const res = await fetch('/api/ideas')
+        const payload = await res.json()
+        if (res.ok && Array.isArray(payload.ideas) && payload.ideas.length > 0) {
+          data = payload.ideas
+        } else {
+          const supabase = createClient()
+          const { data: fallbackData, error } = await supabase
+            .from('ideas')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+          if (error) {
+            throw new Error(payload.error || error.message || '讀取 ideas 失敗')
+          }
+
+          data = fallbackData ?? []
+
+          if (!res.ok) {
+            showNotif(payload.error || '共享資料暫時未讀到，已切回個人資料', 'error')
+          }
+        }
+      } catch (err) {
         setIdeas([])
         setNotes({})
         setIdeasLoading(false)
-        showNotif(payload.error || '讀取 ideas 失敗', 'error')
+        showNotif(err instanceof Error ? err.message : '讀取 ideas 失敗', 'error')
         return
       }
+
       if (data) {
-        setIdeas(data.map((d: any) => ({
-          id: d.id,
-          type: d.type,
-          url: d.url,
-          thumb: d.thumb,
-          views: d.views,
-          likes: d.likes,
-          shares: d.shares,
-          country: d.country,
-          date: d.date,
-          title: d.title,
-          topic: d.topic,
-          summary: d.summary,
-          tags: d.tags || [],
-          viralScore: d.viral_score,
-          aiViralBase: d.ai_viral_base,
-          scriptHook: d.script_hook,
-          lat: d.lat ?? null,
-          lng: d.lng ?? null,
-          notes: d.notes ?? null,
-        })))
+        setIdeas(normalizeIdeas(data))
       }
       const initialNotes: Record<string, string> = {}
       if (data) {
