@@ -9,12 +9,12 @@ export const metadata: Metadata = {
 function NavBar({ creatorMode }: { creatorMode: boolean }) {
   const quickLinkStyle = {
     fontSize: '12px',
-    color: 'rgba(235,239,255,0.82)',
+    color: 'var(--soon-text-secondary)',
     textDecoration: 'none',
     padding: '9px 12px',
-    borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.04)',
+    borderRadius: 'var(--soon-radius)',
+    border: '0.5px solid var(--soon-border)',
+    background: 'transparent',
     letterSpacing: '0.01em',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
@@ -27,15 +27,14 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       left: 0,
       right: 0,
       zIndex: 1000,
-      background: 'linear-gradient(180deg, #21253f 0%, #1d2137 100%)',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
+      background: '#0f0f0f',
+      borderBottom: '0.5px solid var(--soon-border)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 24px',
       height: '60px',
-      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      boxShadow: '0 10px 24px rgba(4,6,15,0.28)',
+      fontFamily: 'system-ui, sans-serif',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
         <div style={{
@@ -43,10 +42,10 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '8px 10px',
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
-          border: '1px solid rgba(255,255,255,0.1)',
-          color: '#f8faff',
+          borderRadius: 'var(--soon-radius)',
+          background: 'var(--soon-purple-dim)',
+          border: '0.5px solid rgba(124,58,237,0.3)',
+          color: 'var(--soon-purple-light)',
           fontSize: '13px',
           fontWeight: 800,
           letterSpacing: '0.12em',
@@ -55,7 +54,7 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
         }}>
           SOON
         </div>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: '#f8faff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--soon-text)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
           Internal
         </span>
       </div>
@@ -63,12 +62,12 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', minWidth: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
         <a href="https://idea-brainstorm.vercel.app" style={{
           fontSize: '12px',
-          color: '#f8faff',
+          color: '#fff',
           textDecoration: 'none',
           padding: '9px 12px',
-          borderRadius: '12px',
-          background: 'rgba(123,97,255,0.18)',
-          border: '1px solid rgba(123,97,255,0.3)',
+          borderRadius: 'var(--soon-radius)',
+          background: 'var(--soon-purple)',
+          border: '0.5px solid rgba(124,58,237,0.3)',
           letterSpacing: '0.01em',
           whiteSpace: 'nowrap',
           flexShrink: 0,
@@ -88,8 +87,8 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
           <a href="https://soon-creator-network.vercel.app/creator-workspace" style={{
             ...quickLinkStyle,
             padding: '9px 14px',
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.14)',
+            background: 'var(--soon-surface2)',
+            border: '0.5px solid var(--soon-border)',
           }}>
             Creator Dashboard
           </a>
@@ -109,7 +108,10 @@ export default async function RootLayout({
 
   return (
     <html lang="zh-HK">
-      <body style={{ margin: 0, padding: 0, paddingTop: '60px', background: '#15192c' }}>
+      <head>
+        <link rel="stylesheet" href="/soon-design-system.css" />
+      </head>
+      <body style={{ margin: 0, padding: 0, paddingTop: '60px', background: 'var(--soon-bg)' }}>
         <NavBar creatorMode={creatorMode} />
         {children}
       </body>
