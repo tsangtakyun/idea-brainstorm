@@ -224,6 +224,61 @@ export default function Home() {
     fetchIdeas()
   }, [])
 
+  useEffect(() => {
+    const loadIdeasForCurrentSession = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('ideas')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        showNotif(error.message || '讀取 ideas 失敗', 'error')
+        return
+      }
+
+      setIdeas(normalizeIdeas(data ?? []))
+      const initialNotes: Record<string, string> = {}
+      ;(data ?? []).forEach((d: any) => {
+        if (d.notes) initialNotes[d.id] = d.notes
+      })
+      setNotes(initialNotes)
+      setIdeasLoading(false)
+    }
+
+    const handleSoonAuth = async (event: MessageEvent) => {
+      if (event.data?.type !== 'SOON_AUTH') return
+
+      const isAllowedOrigin =
+        event.origin === 'https://soon-core.vercel.app' ||
+        /^https:\/\/soon-core-[\w-]+\.vercel\.app$/.test(event.origin) ||
+        event.origin === 'http://localhost:3000'
+
+      if (!isAllowedOrigin) return
+
+      const accessToken = event.data.accessToken || event.data.token
+      const refreshToken = event.data.refreshToken
+      if (!accessToken || !refreshToken) return
+
+      const supabase = createClient()
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+
+      if (!error) {
+        void loadIdeasForCurrentSession()
+      }
+    }
+
+    window.addEventListener('message', handleSoonAuth)
+    return () => window.removeEventListener('message', handleSoonAuth)
+  }, [])
+
   function showNotif(msg: string, type = '') {
     setNotif({ msg, type });
     setTimeout(() => setNotif(null), 3000);
