@@ -1063,7 +1063,7 @@ export default function Home() {
               )}
               {exploreLoading && (
                 <div className="explore-loading">
-                  <p>🤖 Claude 分析題材方向中…</p>
+                  <p>🤖 AI 分析題材方向中…</p>
                   <p>📺 搜尋 YouTube 爆款例子…</p>
                 </div>
               )}
