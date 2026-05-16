@@ -125,6 +125,8 @@ export default function Home() {
   const [showWorldMap, setShowWorldMap] = useState(false);
   const [inputPanelOpen, setInputPanelOpen] = useState(false);
   const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null);
+  const [aiDetail, setAiDetail] = useState('');
+  const [aiDetailLoading, setAiDetailLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -599,6 +601,34 @@ export default function Home() {
   const detailIdea = detailIdeaId ? ideas.find(i => i.id === detailIdeaId) : null;
   const detailNoteContent = detailIdea ? (notes[detailIdea.id] !== undefined ? notes[detailIdea.id] : (detailIdea.notes || detailIdea.summary || '')) : '';
   const pendingFields = [url, desc, country, views, likes, shares].filter(Boolean).length;
+
+  useEffect(() => {
+    setAiDetail('');
+    setAiDetailLoading(false);
+  }, [detailIdeaId]);
+
+  async function handleAiDetail() {
+    if (!detailIdea || aiDetailLoading) return;
+    setAiDetailLoading(true);
+    try {
+      const res = await fetch('/api/ai-detail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: detailIdea.title,
+          placeName: (detailIdea as any).placeName || '',
+          placeAddress: (detailIdea as any).placeAddress || '',
+          summary: detailIdea.summary || detailIdea.notes || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '未能取得資料，請重試。');
+      setAiDetail(data.detail || '');
+    } catch {
+      setAiDetail('未能取得資料，請重試。');
+    }
+    setAiDetailLoading(false);
+  }
 
   const typeBadge: Record<string, string> = { reel: 'badge-reel', blog: 'badge-blog', social: 'badge-social' };
   const typeLabel: Record<string, string> = { reel: 'IG Reel', blog: 'Blog', social: 'Social' };
@@ -1087,6 +1117,19 @@ export default function Home() {
               <div className="detail-section">
                 <div className="rail-copy">{detailIdea.summary || detailIdea.notes || '未有摘要內容。'}</div>
                 {detailIdea.scriptHook && <div className="hook-quote">「{detailIdea.scriptHook}」</div>}
+                <button
+                  className={`ai-detail-btn${aiDetail ? ' generated' : ''}`}
+                  type="button"
+                  onClick={handleAiDetail}
+                  disabled={aiDetailLoading}
+                >
+                  {aiDetailLoading ? '🔍 AI 搜尋中…' : aiDetail ? '✓ 已生成詳細內容' : '✨ AI 提供詳細內容'}
+                </button>
+                {aiDetail && (
+                  <div className="ai-detail-box">
+                    {aiDetail}
+                  </div>
+                )}
               </div>
 
               <div className="detail-section">
@@ -1178,6 +1221,10 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .detail-section:last-child{border-bottom:0;padding-bottom:0}
 .detail-metrics{display:grid;grid-template-columns:1fr;gap:8px}
 .detail-link-group{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.ai-detail-btn{width:100%;padding:10px;margin-top:12px;background:var(--accent);color:white;border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.ai-detail-btn.generated{background:transparent;color:var(--text-secondary);border:1px solid var(--border-subtle)}
+.ai-detail-btn:disabled{cursor:not-allowed;opacity:.7}
+.ai-detail-box{margin-top:16px;padding:14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border-subtle);font-size:13px;color:var(--text-primary);line-height:1.8;white-space:pre-wrap}
 .explore-placeholder{padding:48px 0;text-align:center}
 .explore-title{font-size:24px;font-weight:600;color:var(--text-primary)}
 .explore-copy{font-size:14px;color:var(--text-secondary);margin-top:8px}
