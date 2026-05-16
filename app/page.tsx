@@ -171,6 +171,8 @@ export default function Home() {
 
   useEffect(() => {
     const fetchIdeas = async () => {
+      if (window.location.hash.includes('soon_auth=')) return
+
       let data: any[] = []
 
       try {
@@ -250,18 +252,9 @@ export default function Home() {
       setIdeasLoading(false)
     }
 
-    const handleSoonAuth = async (event: MessageEvent) => {
-      if (event.data?.type !== 'SOON_AUTH') return
-
-      const isAllowedOrigin =
-        event.origin === 'https://soon-core.vercel.app' ||
-        /^https:\/\/soon-core-[\w-]+\.vercel\.app$/.test(event.origin) ||
-        event.origin === 'http://localhost:3000'
-
-      if (!isAllowedOrigin) return
-
-      const accessToken = event.data.accessToken || event.data.token
-      const refreshToken = event.data.refreshToken
+    const applySoonAuth = async (payload: any) => {
+      const accessToken = payload?.accessToken || payload?.token
+      const refreshToken = payload?.refreshToken
       if (!accessToken || !refreshToken) return
 
       const supabase = createClient()
@@ -273,6 +266,31 @@ export default function Home() {
       if (!error) {
         void loadIdeasForCurrentSession()
       }
+    }
+
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const encodedAuth = hashParams.get('soon_auth')
+    if (encodedAuth) {
+      try {
+        const payload = JSON.parse(window.atob(decodeURIComponent(encodedAuth)))
+        void applySoonAuth(payload)
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
+      } catch {
+        // Ignore malformed auth payloads and wait for postMessage fallback.
+      }
+    }
+
+    const handleSoonAuth = async (event: MessageEvent) => {
+      if (event.data?.type !== 'SOON_AUTH') return
+
+      const isAllowedOrigin =
+        event.origin === 'https://soon-core.vercel.app' ||
+        /^https:\/\/soon-core-[\w-]+\.vercel\.app$/.test(event.origin) ||
+        event.origin === 'http://localhost:3000'
+
+      if (!isAllowedOrigin) return
+
+      void applySoonAuth(event.data)
     }
 
     window.addEventListener('message', handleSoonAuth)
