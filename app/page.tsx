@@ -125,6 +125,7 @@ export default function Home() {
   const [showWorldMap, setShowWorldMap] = useState(false);
   const [inputPanelOpen, setInputPanelOpen] = useState(false);
   const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null);
+  const [soonAccessToken, setSoonAccessToken] = useState('');
   const [aiDetail, setAiDetail] = useState('');
   const [aiDetailLoading, setAiDetailLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -286,6 +287,7 @@ export default function Home() {
         return
       }
 
+      setSoonAccessToken(accessToken)
       const supabase = createClient()
       if (refreshToken) {
         await supabase.auth.setSession({
@@ -406,6 +408,20 @@ export default function Home() {
   }
 
   async function saveIdeaToSupabase(idea: any) {
+    if (soonAccessToken) {
+      const res = await fetch('/api/ideas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${soonAccessToken}`,
+        },
+        body: JSON.stringify(idea),
+      })
+      const payload = await res.json()
+      if (!res.ok) throw new Error(payload.error || 'Save failed')
+      return payload.idea
+    }
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not logged in')
@@ -526,6 +542,10 @@ export default function Home() {
       };
       const saved = await saveIdeaToSupabase(ideaData)
       setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
+      setActiveTab('my-ideas');
+      setFilter('all');
+      setSearch('');
+      setInputPanelOpen(false);
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
