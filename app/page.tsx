@@ -458,17 +458,17 @@ export default function Home() {
 
       <div className="workspace-shell">
         {inputPanelOpen && (
-          <button className="panel-backdrop" type="button" aria-label="??????" onClick={() => setInputPanelOpen(false)} />
+          <button className="panel-backdrop" type="button" aria-label="關閉快速輸入" onClick={() => setInputPanelOpen(false)} />
         )}
 
         <aside className={`sidebar${inputPanelOpen ? ' open' : ''}`}>
           <div className="sidebar-top">
             <div>
-              <div className="workspace-chip-title">????</div>
-              <div className="workspace-sub">????????</div>
+              <div className="workspace-chip-title">新增想法</div>
+              <div className="workspace-sub">快速輸入題材資料</div>
             </div>
             <button className="panel-close" onClick={() => setInputPanelOpen(false)} type="button">
-              ??
+              關閉
             </button>
           </div>
 
@@ -648,7 +648,7 @@ export default function Home() {
                 {showWorldMap ? '收起地圖' : '打開地圖'}
               </button>
               <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
-                ????
+                新增想法
               </button>
             </div>
           </div>
