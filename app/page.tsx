@@ -119,9 +119,9 @@ export default function Home() {
   const [placeLng, setPlaceLng] = useState<number | null>(null);
   const [showWorldMap, setShowWorldMap] = useState(false);
   const [inputPanelOpen, setInputPanelOpen] = useState(false);
+  const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
-  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const [statusSteps, setStatusSteps] = useState<{ label: string; state: string }[] | null>(null);
@@ -428,11 +428,9 @@ export default function Home() {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-  const totalViews = ideas.reduce((s, i) => s + (i.views || 0), 0);
-  const avgViral = ideas.length ? Math.round(ideas.reduce((s, i) => s + (i.viralScore || 0), 0) / ideas.length) : 0;
-  const countryCount = new Set(ideas.map(i => i.country).filter(Boolean)).size;
-  const topIdea = filtered[0] || ideas[0] || null;
   const mappedCountries = Array.from(new Set(filtered.map(i => i.country).filter(Boolean))).slice(0, 6);
+  const detailIdea = detailIdeaId ? ideas.find(i => i.id === detailIdeaId) : null;
+  const detailNoteContent = detailIdea ? (notes[detailIdea.id] !== undefined ? notes[detailIdea.id] : (detailIdea.notes || detailIdea.summary || '')) : '';
   const pendingFields = [url, desc, country, views, likes, shares].filter(Boolean).length;
 
   const typeBadge: Record<string, string> = { reel: 'badge-reel', blog: 'badge-blog', social: 'badge-social' };
@@ -659,13 +657,6 @@ export default function Home() {
               <div className="hero-title">集中管理連結、AI 分析與題材方向，讓前期研究更像真正工作台。</div>
               <div className="hero-copy">由連結自動分析、地區標記、爆款評分到腳本前置筆記，全部可直接留在同一個內部 board 裡處理。</div>
             </div>
-
-            <div className="stat-grid">
-              <div className="stat-card"><span>已收錄想法</span><strong>{ideas.length}</strong></div>
-              <div className="stat-card"><span>總 Views</span><strong>{fmtNum(totalViews)}</strong></div>
-              <div className="stat-card"><span>平均爆款分</span><strong>{avgViral}</strong></div>
-              <div className="stat-card"><span>地區數量</span><strong>{countryCount}</strong></div>
-            </div>
           </section>
 
           <section className="board-toolbar" ref={boardRef}>
@@ -719,8 +710,6 @@ export default function Home() {
                   <div className="list-head">
                     <div>題材</div>
                     <div>爆款指數</div>
-                    <div>數據</div>
-                    <div>參考影片</div>
                     <div>操作</div>
                   </div>
                   <div className="idea-list">
@@ -787,79 +776,24 @@ export default function Home() {
                             </div>
 
                             <div className="idea-score-cell">
-                              <div className="score-pill">{vs}</div>
-                              <div className="viral-row wide">
-                                <span className="viral-label">爆款指數</span>
+                              <div className="score-number">{vs}</div>
+                              <div className="viral-row compact">
                                 <div className="viral-bar"><div className="viral-fill" style={{ width: vs + '%', background: viralColor }} /></div>
                               </div>
                             </div>
 
-                            <div className="idea-metrics">
-                              <div className="metric-box">
-                                <div className="metric-value">{fmtNum(idea.views || 0)}</div>
-                                <div className="metric-key">Views</div>
-                              </div>
-                              <div className="metric-box">
-                                <div className="metric-value">{fmtNum(idea.likes || 0)}</div>
-                                <div className="metric-key">Likes</div>
-                              </div>
-                              <div className="metric-box">
-                                <div className="metric-value">{fmtNum(idea.shares || 0)}</div>
-                                <div className="metric-key">Save</div>
-                              </div>
-                            </div>
-
-                            <div className="idea-meta">
-                              {idea.url && <a className="video-link-btn" href={idea.url} target="_blank" rel="noopener">{PLATFORM_META[platform]?.label || '影片'} →</a>}
-                              <a className="btn-script btn-script-meta" href={scriptUrl} target="_blank" rel="noopener">推上劇本生成</a>
-                              {idea.url && <a className="card-source" href={idea.url} target="_blank" rel="noopener">{hostOf(idea.url)}</a>}
-                              <span className="card-date">{new Date(idea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
-                            </div>
-
                             <div className="idea-actions">
-                              <button onClick={()=>setExpandedNotes(prev=>({...prev,[idea.id]:!prev[idea.id]}))} className="row-action-btn">
-                                {expandedNotes[idea.id] ? '▴ 收起詳情' : '▾ 詳情'}
+                              <a className="btn-script btn-script-meta" href={scriptUrl} target="_blank" rel="noopener">推上劇本生成</a>
+                              <button onClick={()=>setDetailIdeaId(idea.id)} className="row-action-btn">
+                                詳情
                               </button>
                               <button className="card-delete row-delete" onClick={async () => {
                                 setIdeas(prev => prev.filter(i => i.id !== idea.id));
+                                if (detailIdeaId === idea.id) setDetailIdeaId(null);
                                 await deleteIdeaFromSupabase(idea.id);
                               }}>×</button>
                             </div>
                           </div>
-
-                          {expandedNotes[idea.id] && (
-                            <div className="idea-expanded">
-                              <div className="idea-expanded-grid">
-                                <div>
-                                  <div className="expanded-label">詳細內容</div>
-                                  <textarea
-                                    className="field"
-                                    rows={5}
-                                    style={{fontSize:11,lineHeight:1.6,resize:'vertical'}}
-                                    value={noteContent}
-                                    onChange={e => setNotes(prev => ({...prev, [idea.id]: e.target.value}))}
-                                    onBlur={e => saveNote(idea.id, e.target.value)}
-                                    placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
-                                  />
-                                  <div className="expanded-save-state">
-                                    {savingNote === idea.id ? '儲存中...' : notes[idea.id] !== undefined ? '✓ 已儲存' : ''}
-                                  </div>
-                                </div>
-
-                                <div className="idea-expanded-side">
-                                  {idea.scriptHook && <div className="hook-quote">「{idea.scriptHook}」</div>}
-                                  {idea.lat && idea.lng && (
-                                    <div style={{borderRadius:"18px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.08)"}}>
-                                      <iframe
-                                        src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${idea.lat},${idea.lng}&zoom=15`}
-                                        width="100%" height="140" style={{border:0,display:"block"}} allowFullScreen
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -867,15 +801,76 @@ export default function Home() {
                 </div>
               )}
             </section>
+          </div>
+        </main>
 
-            <aside className="right-rail" ref={analysisRef}>
-              <div className="rail-card">
-                <div className="rail-eyebrow">精選摘要</div>
-                <div className="rail-title">{topIdea?.title || '等待第一個題材進入系統'}</div>
-                <div className="rail-copy">{topIdea?.summary || '當你儲存第一個想法之後，右側會自動顯示優先關注的題材摘要。'}</div>
+        {detailIdea && (
+          <>
+            <button className="detail-backdrop" type="button" aria-label="關閉詳情" onClick={() => setDetailIdeaId(null)} />
+            <aside className="detail-panel" ref={analysisRef}>
+              <div className="detail-panel-head">
+                <div>
+                  <div className="rail-eyebrow">鏈結摘要</div>
+                  <div className="rail-title">{detailIdea.title || '未命名題材'}</div>
+                </div>
+                <button className="panel-close" type="button" onClick={() => setDetailIdeaId(null)}>×</button>
               </div>
 
-              <div className="rail-card">
+              <div className="detail-section">
+                <div className="rail-copy">{detailIdea.summary || detailIdea.notes || '未有摘要內容。'}</div>
+                {detailIdea.scriptHook && <div className="hook-quote">「{detailIdea.scriptHook}」</div>}
+              </div>
+
+              <div className="detail-section">
+                <div className="rail-eyebrow">詳細內容</div>
+                <textarea
+                  className="field"
+                  rows={6}
+                  style={{fontSize:12,lineHeight:1.6,resize:'vertical'}}
+                  value={detailNoteContent}
+                  onChange={e => setNotes(prev => ({...prev, [detailIdea.id]: e.target.value}))}
+                  onBlur={e => saveNote(detailIdea.id, e.target.value)}
+                  placeholder="加入筆記、補充資料、拍攝角度...（失焦自動儲存）"
+                />
+                <div className="expanded-save-state">
+                  {savingNote === detailIdea.id ? '儲存中...' : notes[detailIdea.id] !== undefined ? '✓ 已儲存' : ''}
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="rail-eyebrow">數據</div>
+                <div className="detail-metrics">
+                  <div className="metric-box">
+                    <div className="metric-value">{fmtNum(detailIdea.views || 0)}</div>
+                    <div className="metric-key">Views</div>
+                  </div>
+                  <div className="metric-box">
+                    <div className="metric-value">{fmtNum(detailIdea.likes || 0)}</div>
+                    <div className="metric-key">Likes</div>
+                  </div>
+                  <div className="metric-box">
+                    <div className="metric-value">{fmtNum(detailIdea.shares || 0)}</div>
+                    <div className="metric-key">Save</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="rail-eyebrow">參考影片</div>
+                {detailIdea.url ? (
+                  <div className="detail-link-group">
+                    <a className="video-link-btn" href={detailIdea.url} target="_blank" rel="noopener">
+                      {PLATFORM_META[inferPlatformFromUrl(detailIdea.url)]?.label || '影片'} →
+                    </a>
+                    <a className="card-source" href={detailIdea.url} target="_blank" rel="noopener">{hostOf(detailIdea.url)}</a>
+                    <span className="card-date">{new Date(detailIdea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
+                  </div>
+                ) : (
+                  <div className="rail-muted">未有參考影片連結</div>
+                )}
+              </div>
+
+              <div className="detail-section">
                 <div className="rail-eyebrow">常用地區</div>
                 <div className="rail-chip-wrap">
                   {mappedCountries.length ? mappedCountries.map(code => (
@@ -883,18 +878,9 @@ export default function Home() {
                   )) : <span className="rail-muted">尚未有地區資料</span>}
                 </div>
               </div>
-
-              <div className="rail-card">
-                <div className="rail-eyebrow">工作建議</div>
-                <div className="rail-list">
-                  <div className="rail-list-item">先用「自動分析」讀取連結，再補上店鋪背景，AI 會更易生成貼地題材。</div>
-                  <div className="rail-list-item">爆款分高但主題分散的內容，可以先記錄在筆記區，之後再交給劇本生成器延伸。</div>
-                  <div className="rail-list-item">如果是跨地區題材，建議同時開地圖檢查題材來源分布。</div>
-                </div>
-              </div>
             </aside>
-          </div>
-        </main>
+          </>
+        )}
       </div>
 
       {notif && (
@@ -916,6 +902,14 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .workspace-chip-title{font-size:18px;font-weight:600;color:var(--text-primary)}
 .panel-close{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:var(--radius);padding:7px 10px;font-family:var(--sans);font-size:12px;cursor:pointer}
 .panel-close:hover{background:var(--bg-card-hover);color:var(--text-primary)}
+.detail-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(0,0,0,.48);cursor:pointer}
+.detail-panel{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(360px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;box-shadow:-24px 0 60px rgba(0,0,0,.32);animation:slideDetail .22s ease}
+@keyframes slideDetail{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.detail-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
+.detail-section{display:grid;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
+.detail-section:last-child{border-bottom:0;padding-bottom:0}
+.detail-metrics{display:grid;grid-template-columns:1fr;gap:8px}
+.detail-link-group{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;color:var(--text-primary);cursor:pointer}
 .workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:var(--radius);background:var(--bg-card-hover);border:1px solid var(--border-subtle);font-size:10px;font-weight:600;letter-spacing:0.12em;line-height:1;color:var(--accent)}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
@@ -933,25 +927,19 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .ghost-top-btn,.primary-top-btn{border:none;border-radius:var(--radius);padding:12px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .ghost-top-btn{background:transparent;border:1px solid var(--border-default);color:var(--text-primary)}
 .primary-top-btn{background:var(--accent);color:white;box-shadow:none}
-.hero-row{display:grid;grid-template-columns:minmax(0,1.2fr) 380px;gap:18px}
+.hero-row{display:grid;grid-template-columns:1fr;gap:18px}
 .hero-card{border-radius:var(--radius-md);border:1px solid var(--border-subtle);padding:24px;background:var(--bg-card)}
 .hero-card-primary{background:var(--bg-card)}
 .hero-eyebrow{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
 .hero-title{font-size:28px;line-height:1.15;font-weight:600;max-width:720px;color:var(--text-primary)}
 .hero-copy{margin-top:12px;color:var(--text2);max-width:760px}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.stat-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:18px;display:flex;flex-direction:column;gap:8px}
-.stat-card span{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-secondary);font-weight:400}
-.stat-card strong{font-size:28px;line-height:1;font-weight:600;color:var(--text-primary)}
 .board-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px}
 .gallery-title{font-size:18px;color:var(--text-primary);font-weight:600}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .filter-strip{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .filter-divider{width:1px;height:18px;background:var(--border2);margin:0 4px}
-.content-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.content-grid{display:grid;grid-template-columns:1fr;gap:18px;align-items:start}
 .board-panel{min-width:0}
-.right-rail{display:grid;gap:14px;position:sticky;top:84px}
-.rail-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:18px}
 .rail-eyebrow{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
 .rail-title{font-size:20px;line-height:1.2;font-weight:500}
 .rail-copy{font-size:13px;line-height:1.7;color:var(--text2);margin-top:10px}
@@ -997,11 +985,11 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .sort-select{padding:9px 32px 9px 12px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius);color:var(--text-secondary);font-family:var(--sans);font-size:11px;font-weight:400;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239090a8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 .map-panel{margin-bottom:4px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-subtle)}
 .list-wrap{border:1px solid var(--border-subtle);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-card)}
-.list-head{display:grid;grid-template-columns:minmax(320px,1.8fr) minmax(180px,0.9fr) minmax(180px,0.9fr) minmax(140px,0.8fr) minmax(180px,0.9fr);gap:16px;padding:12px 16px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)}
+.list-head{display:grid;grid-template-columns:minmax(360px,1fr) 150px 300px;gap:16px;padding:12px 16px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)}
 .idea-list{display:flex;flex-direction:column}
 .idea-row-group{border-bottom:1px solid var(--border-subtle)}
 .idea-row-group:last-child{border-bottom:none}
-.idea-row{display:grid;grid-template-columns:minmax(320px,1.8fr) minmax(180px,0.9fr) minmax(180px,0.9fr) minmax(140px,0.8fr) minmax(180px,0.9fr);gap:16px;padding:16px;background:transparent;align-items:center}
+.idea-row{display:grid;grid-template-columns:minmax(360px,1fr) 150px 300px;gap:16px;padding:16px;background:transparent;align-items:center}
 .idea-row:hover{background:var(--bg-card-hover)}
 .idea-main{display:flex;align-items:flex-start;gap:14px;min-width:0}
 .idea-main-copy{min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -1015,14 +1003,15 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .idea-summary{font-size:12px;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .idea-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
 .idea-score-cell{display:flex;flex-direction:column;gap:10px}
-.score-pill{display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:6px 10px;border-radius:999px;background:rgba(124,92,252,0.14);font-size:22px;font-weight:600;color:var(--text-primary)}
-.viral-row.wide{gap:8px}
+.score-number{font-size:20px;font-weight:600;color:var(--text-primary);line-height:1}
+.viral-row.compact{width:96px;gap:0}
 .idea-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .metric-box{padding:10px;border:1px solid var(--border-subtle);border-radius:var(--radius);background:var(--bg-card)}
 .metric-value{font-size:18px;font-weight:600;color:var(--text-primary)}
 .metric-key{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
 .idea-meta{display:flex;flex-direction:column;gap:8px}
-.idea-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.idea-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;opacity:0;pointer-events:none;transition:opacity .15s ease}
+.idea-row:hover .idea-actions{opacity:1;pointer-events:auto}
 .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:transparent;border:1px solid var(--border-default);color:var(--text-secondary);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
 .row-action-btn:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .row-delete{padding:7px 9px;border:1px solid rgba(255,255,255,0.14)}
@@ -1056,8 +1045,7 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .notif.show{transform:translateY(0);opacity:1}
 .notif.success{border-color:rgba(90,138,106,0.4);color:#7fdfaa}
 .notif.error{border-color:rgba(180,80,60,0.3);color:#ff9f8f}
-@media(max-width:1360px){.content-grid{grid-template-columns:1fr}.right-rail{position:static}.hero-row{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}.idea-expanded-grid{grid-template-columns:1fr}}
-@media(max-width:900px){.stat-grid{grid-template-columns:1fr 1fr}.main-panel{padding:18px}}
-@media(max-width:640px){.stat-grid{grid-template-columns:1fr}.workspace-actions{width:100%}.ghost-top-btn,.primary-top-btn{flex:1}.search-field{width:100%}}
+@media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}}
+@media(max-width:900px){.main-panel{padding:18px}}
+@media(max-width:640px){.workspace-actions{width:100%}.ghost-top-btn,.primary-top-btn{flex:1}.search-field{width:100%}}
 `;
