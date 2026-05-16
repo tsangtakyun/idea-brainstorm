@@ -885,15 +885,16 @@ export default function Home() {
           {activeTab === 'my-ideas' ? (
             <>
               <section className="hero-row" ref={homeRef}>
-                <div className="hero-card hero-card-primary">
-                  <div className="hero-eyebrow">今日概況</div>
-                  <div className="hero-title">每個人都需要建立自己的題材庫</div>
-                  <div className="hero-copy hero-steps">
-                    <div><span>01 ·</span> 貼入連結，讓我們自動分析題材、地區、爆款潛力</div>
-                    <div><span>02 ·</span> 或去「發掘題材」輸入關鍵字，讓我們幫你找尋爆款方向</div>
-                    <div><span>03 ·</span> 儲存後一鍵推去劇本生成，直接開始創作</div>
-                  </div>
-                </div>
+                <img
+                  src="/hero-banner.png"
+                  alt="每個人都需要建立自己的題材庫"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    display: 'block',
+                    marginBottom: '24px',
+                  }}
+                />
               </section>
 
               <section className="board-toolbar" ref={boardRef}>
@@ -1301,13 +1302,6 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .tab-action-explore{border-color:#f59e0b;color:#f59e0b}
 .tab-action-explore.active{background:#f59e0b;color:white;border-color:#f59e0b}
 .hero-row{display:grid;grid-template-columns:1fr;gap:18px}
-.hero-card{border-radius:var(--radius-md);border:1px solid var(--border-subtle);padding:24px;background:var(--bg-card)}
-.hero-card-primary{background:var(--bg-card)}
-.hero-eyebrow{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
-.hero-title{font-size:20px;line-height:1.25;font-weight:600;max-width:720px;color:var(--text-primary)}
-.hero-copy{margin-top:12px;color:var(--text2);max-width:760px}
-.hero-steps{font-size:14px;color:var(--text-secondary);line-height:2}
-.hero-steps span{color:var(--accent);font-weight:600}
 .board-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px}
 .gallery-title{font-size:18px;color:var(--text-primary);font-weight:600}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
