@@ -118,6 +118,7 @@ export default function Home() {
   const [placeLat, setPlaceLat] = useState<number | null>(null);
   const [placeLng, setPlaceLng] = useState<number | null>(null);
   const [showWorldMap, setShowWorldMap] = useState(false);
+  const [inputPanelOpen, setInputPanelOpen] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
@@ -456,13 +457,19 @@ export default function Home() {
       <style>{CSS}</style>
 
       <div className="workspace-shell">
-        <aside className="sidebar">
+        {inputPanelOpen && (
+          <button className="panel-backdrop" type="button" aria-label="??????" onClick={() => setInputPanelOpen(false)} />
+        )}
+
+        <aside className={`sidebar${inputPanelOpen ? ' open' : ''}`}>
           <div className="sidebar-top">
-            <button className="workspace-chip" onClick={() => jumpTo('home')} type="button">
-              <span className="workspace-chip-logo">SOON</span>
-              <span>Idea Brainstorm</span>
+            <div>
+              <div className="workspace-chip-title">????</div>
+              <div className="workspace-sub">????????</div>
+            </div>
+            <button className="panel-close" onClick={() => setInputPanelOpen(false)} type="button">
+              ??
             </button>
-            <div className="workspace-sub">SOON 內部題材系統</div>
           </div>
 
           <div className="sidebar-nav">
@@ -640,8 +647,8 @@ export default function Home() {
               <button className="ghost-top-btn" onClick={()=>setShowWorldMap(v=>!v)}>
                 {showWorldMap ? '收起地圖' : '打開地圖'}
               </button>
-              <button className="primary-top-btn" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? '分析中…' : '新增想法'}
+              <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
+                ????
               </button>
             </div>
           </div>
@@ -902,8 +909,13 @@ const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans);font-size:14px;font-weight:400;line-height:1.65;min-height:100vh}
 .workspace-shell{display:flex;flex-direction:column;min-height:100vh;background:var(--bg-base)}
-.sidebar{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:22px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin:24px 24px 0}
-.sidebar-top{display:none}
+.sidebar{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(460px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;transform:translateX(100%);transition:transform .22s ease;box-shadow:-24px 0 60px rgba(0,0,0,.32)}
+.sidebar.open{transform:translateX(0)}
+.panel-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(0,0,0,.52);cursor:pointer}
+.sidebar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
+.workspace-chip-title{font-size:18px;font-weight:600;color:var(--text-primary)}
+.panel-close{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:var(--radius);padding:7px 10px;font-family:var(--sans);font-size:12px;cursor:pointer}
+.panel-close:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;color:var(--text-primary);cursor:pointer}
 .workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:var(--radius);background:var(--bg-card-hover);border:1px solid var(--border-subtle);font-size:10px;font-weight:600;letter-spacing:0.12em;line-height:1;color:var(--accent)}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
@@ -968,7 +980,6 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 .divider{display:none}
 .ai-status{padding:14px 16px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);font-size:12px;color:var(--text-secondary);line-height:1.9}
-.ai-status{grid-column:1/-1}
 .ai-status .step{display:flex;align-items:center;gap:8px}
 .step-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border2);transition:background 0.3s}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
@@ -976,7 +987,6 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .step.active .step-dot{background:var(--text);animation:pulse 1s ease-in-out infinite}
 .step.done{color:var(--text3)}.step.active{color:var(--text);font-weight:400}
 .btn-submit{width:100%;padding:13px 20px;background:var(--accent);border:none;border-radius:var(--radius);color:white;font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;cursor:pointer;transition:background 0.15s,transform 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:none}
-.btn-submit{grid-column:1/-1}
 .btn-submit:hover{background:var(--accent-hover);transform:scale(0.98)}
 .spinner{width:14px;height:14px;border:1.5px solid rgba(255,255,255,0.25);border-top-color:rgba(255,255,255,0.9);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -1047,7 +1057,7 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .notif.success{border-color:rgba(90,138,106,0.4);color:#7fdfaa}
 .notif.error{border-color:rgba(180,80,60,0.3);color:#ff9f8f}
 @media(max-width:1360px){.content-grid{grid-template-columns:1fr}.right-rail{position:static}.hero-row{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}.idea-expanded-grid{grid-template-columns:1fr}.sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){.sidebar{grid-template-columns:1fr;margin:18px 18px 0}.stat-grid{grid-template-columns:1fr 1fr}.main-panel{padding:18px}}
+@media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}.idea-expanded-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.stat-grid{grid-template-columns:1fr 1fr}.main-panel{padding:18px}}
 @media(max-width:640px){.stat-grid{grid-template-columns:1fr}.workspace-actions{width:100%}.ghost-top-btn,.primary-top-btn{flex:1}.search-field{width:100%}}
 `;
