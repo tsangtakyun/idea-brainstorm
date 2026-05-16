@@ -276,7 +276,18 @@ export default function Home() {
     }
 
     window.addEventListener('message', handleSoonAuth)
-    return () => window.removeEventListener('message', handleSoonAuth)
+    const notifyParent = () => {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'SOON_TOOL_READY', tool: 'idea-brainstorm' }, '*')
+      }
+    }
+    notifyParent()
+    const timers = [700, 1800, 3200].map((delay) => window.setTimeout(notifyParent, delay))
+
+    return () => {
+      window.removeEventListener('message', handleSoonAuth)
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
   }, [])
 
   function showNotif(msg: string, type = '') {
