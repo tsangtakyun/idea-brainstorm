@@ -8,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 function NavBar({ creatorMode }: { creatorMode: boolean }) {
+  return null
+
   const quickLinkStyle = {
     fontSize: '12px',
     color: 'var(--soon-text-secondary)',
@@ -115,7 +117,7 @@ export default async function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="/soon-design-system.css" />
       </head>
-      <body style={{ margin: 0, padding: 0, paddingTop: '60px', background: 'var(--soon-bg)' }}>
+      <body style={{ margin: 0, padding: 0, background: 'var(--soon-bg)' }}>
         <EmbeddedMode />
         <NavBar creatorMode={creatorMode} />
         {children}
