@@ -607,6 +607,7 @@ export default function Home() {
       tool: 'script',
       topic: idea.title || '',
       background: noteContent,
+      location: idea.placeAddress || idea.address || '',
     }, '*');
   };
 
