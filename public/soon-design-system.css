@@ -1,14 +1,25 @@
 :root {
-  --soon-bg: #0a0a0a;
-  --soon-surface: #141414;
-  --soon-surface2: #1c1c1c;
-  --soon-border: rgba(255,255,255,0.08);
-  --soon-purple: #7c3aed;
-  --soon-purple-light: #a78bfa;
-  --soon-purple-dim: rgba(124,58,237,0.15);
-  --soon-text: #f5f5f5;
-  --soon-text-secondary: #888888;
-  --soon-text-muted: #555555;
+  --bg-base: #0a0a0f;
+  --bg-surface: #111118;
+  --bg-card: #16161f;
+  --bg-card-hover: #1c1c28;
+  --border-subtle: #2a2a3a;
+  --border-default: #3a3a50;
+  --accent: #7c5cfc;
+  --accent-hover: #6b4ef0;
+  --text-primary: #f0f0f5;
+  --text-secondary: #9090a8;
+  --text-muted: #5a5a72;
+  --soon-bg: var(--bg-base);
+  --soon-surface: var(--bg-surface);
+  --soon-surface2: var(--bg-card);
+  --soon-border: var(--border-subtle);
+  --soon-purple: var(--accent);
+  --soon-purple-light: #a79cff;
+  --soon-purple-dim: rgba(124,92,252,0.14);
+  --soon-text: var(--text-primary);
+  --soon-text-secondary: var(--text-secondary);
+  --soon-text-muted: var(--text-muted);
   --soon-success: #34d399;
   --soon-radius: 8px;
   --soon-radius-lg: 12px;
@@ -17,7 +28,7 @@
 body {
   background: var(--soon-bg);
   color: var(--soon-text);
-  font-family: system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
 }
 
@@ -34,7 +45,7 @@ body {
   background: var(--soon-purple);
   color: #fff;
 }
-.soon-btn-primary:hover { background: #6d28d9; }
+.soon-btn-primary:hover { background: var(--accent-hover); }
 .soon-btn-secondary {
   background: transparent;
   color: var(--soon-text);

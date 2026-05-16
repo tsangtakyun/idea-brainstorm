@@ -28,14 +28,14 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
       left: 0,
       right: 0,
       zIndex: 1000,
-      background: '#0f0f0f',
+      background: 'var(--bg-surface)',
       borderBottom: '0.5px solid var(--soon-border)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 24px',
       height: '60px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
         <div style={{
@@ -45,7 +45,7 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
           padding: '8px 10px',
           borderRadius: 'var(--soon-radius)',
           background: 'var(--soon-purple-dim)',
-          border: '0.5px solid rgba(124,58,237,0.3)',
+          border: '0.5px solid var(--border-default)',
           color: 'var(--soon-purple-light)',
           fontSize: '13px',
           fontWeight: 800,
@@ -68,7 +68,7 @@ function NavBar({ creatorMode }: { creatorMode: boolean }) {
           padding: '9px 12px',
           borderRadius: 'var(--soon-radius)',
           background: 'var(--soon-purple)',
-          border: '0.5px solid rgba(124,58,237,0.3)',
+          border: '0.5px solid var(--accent)',
           letterSpacing: '0.01em',
           whiteSpace: 'nowrap',
           flexShrink: 0,
@@ -110,6 +110,9 @@ export default async function RootLayout({
   return (
     <html lang="zh-HK">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="/soon-design-system.css" />
       </head>
       <body style={{ margin: 0, padding: 0, paddingTop: '60px', background: 'var(--soon-bg)' }}>
