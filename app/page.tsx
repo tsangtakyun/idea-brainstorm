@@ -11,7 +11,6 @@ const COUNTRIES: Record<string, string> = {
   FR:'🇫🇷 法國', DE:'🇩🇪 德國', OTHER:'🌍 其他'
 };
 
-const SCRIPT_GEN_URL = 'https://script-generator-xi.vercel.app';
 const PLATFORM_META: Record<string, { label: string; emoji: string }> = {
   instagram: { label: 'IG REEL', emoji: '📸' },
   tiktok: { label: 'TIKTOK', emoji: '🎵' },
@@ -600,6 +599,17 @@ export default function Home() {
     setInputPanelOpen(true);
   }
 
+  const handlePushToScript = (idea: any) => {
+    const noteContent = idea.notes || idea.summary || '';
+    window.parent.postMessage({
+      type: 'SOON_NAVIGATE_TOOL',
+      pipeline: 'ig',
+      tool: 'script',
+      topic: idea.title || '',
+      background: noteContent,
+    }, '*');
+  };
+
   const filtered = ideas
     .filter(i => {
       if (filter.startsWith('country-')) return i.country === filter.replace('country-', '');
@@ -955,8 +965,6 @@ export default function Home() {
                     {filtered.map(idea => {
                       const vs = idea.viralScore || 0;
                       const viralColor = vs >= 70 ? 'var(--accent)' : vs >= 40 ? 'var(--soon-success)' : 'var(--soon-purple-light)';
-                      const noteContent = notes[idea.id] !== undefined ? notes[idea.id] : (idea.notes || idea.summary || '');
-                      const scriptUrl = `${SCRIPT_GEN_URL}?topic=${encodeURIComponent(idea.title || '')}&background=${encodeURIComponent(noteContent)}`;
                       const platform = inferPlatformFromUrl(idea.url || '');
                       return (
                         <div key={idea.id} className="idea-row-group">
@@ -1022,7 +1030,7 @@ export default function Home() {
                             </div>
 
                             <div className="idea-actions">
-                              <a className="btn-script btn-script-meta" href={scriptUrl} target="_blank" rel="noopener">推上劇本生成</a>
+                              <button className="btn-script btn-script-meta" type="button" onClick={() => handlePushToScript(idea)}>推上劇本生成</button>
                               <button onClick={()=>setDetailIdeaId(idea.id)} className="row-action-btn">
                                 詳情
                               </button>
