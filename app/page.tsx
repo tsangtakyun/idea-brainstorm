@@ -890,9 +890,7 @@ export default function Home() {
                   alt="每個人都需要建立自己的題材庫"
                   style={{
                     width: '100%',
-                    height: '200px',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
+                    height: 'auto',
                     borderRadius: '12px',
                     display: 'block',
                     marginBottom: '24px',
