@@ -856,11 +856,9 @@ export default function Home() {
               <button className="ghost-top-btn" onClick={()=>setShowWorldMap(v=>!v)}>
                 {showWorldMap ? '收起地圖' : '打開地圖'}
               </button>
-              {activeTab === 'my-ideas' && (
-                <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
-                  新增想法
-                </button>
-              )}
+              <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
+                新增想法
+              </button>
             </div>
           </div>
 
@@ -1271,12 +1269,16 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .main-panel{width:100%;padding:24px;display:flex;flex-direction:column;gap:18px}
 .workspace-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
 .workspace-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.ghost-top-btn,.primary-top-btn{border:none;border-radius:var(--radius);padding:12px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s}
-.ghost-top-btn{background:transparent;border:1px solid var(--border-default);color:var(--text-primary)}
-.primary-top-btn{background:var(--accent);color:white;box-shadow:none}
+.ghost-top-btn,.primary-top-btn{border-radius:8px;padding:8px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s,color 0.15s,border-color 0.15s}
+.ghost-top-btn{background:transparent;border:1px solid #0ea5e9;color:#0ea5e9}
+.ghost-top-btn:hover{background:#0ea5e9;color:white}
+.primary-top-btn{border:1px solid #10b981;background:#10b981;color:white;box-shadow:none}
+.primary-top-btn:hover{background:#059669;border-color:#059669;color:white}
 .tab-action-btn{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:8px;padding:8px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s,color 0.15s,border-color 0.15s}
 .tab-action-btn:hover,.ghost-top-btn:hover,.primary-top-btn:hover{transform:translateY(-1px)}
+.tab-action-my{border-color:#7c5cfc;color:#7c5cfc}
 .tab-action-my.active{background:#7c5cfc;color:white;border-color:#7c5cfc}
+.tab-action-explore{border-color:#f59e0b;color:#f59e0b}
 .tab-action-explore.active{background:#f59e0b;color:white;border-color:#f59e0b}
 .hero-row{display:grid;grid-template-columns:1fr;gap:18px}
 .hero-card{border-radius:var(--radius-md);border:1px solid var(--border-subtle);padding:24px;background:var(--bg-card)}
