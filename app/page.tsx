@@ -105,6 +105,7 @@ async function callClaude(url: string, desc: string, image: string | null, views
 export default function Home() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'my-ideas' | 'explore'>('my-ideas');
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('date');
   const [search, setSearch] = useState('');
@@ -655,62 +656,82 @@ export default function Home() {
               <div className="brand-label">SOON 創意營運</div>
               <h1 className="page-title">IG reel 題材靈感工作台</h1>
               <div className="header-meta">{ideasLoading ? '正在同步資料...' : `目前已整理 ${ideas.length} 個靈感素材`}</div>
+              <div className="tab-bar">
+                <button
+                  className={`tab-btn${activeTab === 'my-ideas' ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => setActiveTab('my-ideas')}
+                >
+                  我的靈感庫
+                </button>
+                <button
+                  className={`tab-btn${activeTab === 'explore' ? ' active' : ''}`}
+                  type="button"
+                  onClick={() => setActiveTab('explore')}
+                >
+                  發掘題材
+                </button>
+              </div>
             </div>
             <div className="workspace-actions">
               <button className="ghost-top-btn" onClick={()=>setShowWorldMap(v=>!v)}>
                 {showWorldMap ? '收起地圖' : '打開地圖'}
               </button>
-              <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
-                新增想法
-              </button>
+              {activeTab === 'my-ideas' && (
+                <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
+                  新增想法
+                </button>
+              )}
             </div>
           </div>
 
-          <section className="hero-row" ref={homeRef}>
-            <div className="hero-card hero-card-primary">
-              <div className="hero-eyebrow">今日概況</div>
-              <div className="hero-title">集中管理連結、AI 分析與題材方向，讓前期研究更像真正工作台。</div>
-              <div className="hero-copy">由連結自動分析、地區標記、爆款評分到腳本前置筆記，全部可直接留在同一個內部 board 裡處理。</div>
-            </div>
-          </section>
+          {activeTab === 'my-ideas' ? (
+            <>
+              <section className="hero-row" ref={homeRef}>
+                <div className="hero-card hero-card-primary">
+                  <div className="hero-eyebrow">今日概況</div>
+                  <div className="hero-title">集中管理連結、AI 分析與題材方向，讓前期研究更像真正工作台。</div>
+                  <div className="hero-copy">由連結自動分析、地區標記、爆款評分到腳本前置筆記，全部可直接留在同一個內部 board 裡處理。</div>
+                </div>
+              </section>
 
-          <section className="board-toolbar" ref={boardRef}>
-            <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
-            <div className="controls">
-              <input className="search-field" placeholder="搜尋題目、主題、標籤…" value={search} onChange={e => setSearch(e.target.value)} />
-              <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
-                <option value="date">最新優先</option>
-                <option value="viral">爆款評分</option>
-                <option value="views">Views 最多</option>
-              </select>
-            </div>
-          </section>
+              <section className="board-toolbar" ref={boardRef}>
+                <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
+                <div className="controls">
+                  <input className="search-field" placeholder="搜尋題目、主題、標籤…" value={search} onChange={e => setSearch(e.target.value)} />
+                  <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+                    <option value="date">最新優先</option>
+                    <option value="viral">爆款評分</option>
+                    <option value="views">Views 最多</option>
+                  </select>
+                </div>
+              </section>
 
-          {showWorldMap && filtered.length > 0 && (
-            <div className="map-panel">
-              <iframe
-                src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).length > 0 ? filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join("|") : filtered.map((i:any)=>i.title).slice(0,3).join("|"))}`}
-                width="100%" height="320" style={{border:0,display:"block"}} allowFullScreen
-              />
-            </div>
-          )}
+              {showWorldMap && filtered.length > 0 && (
+                <div className="map-panel">
+                  <iframe
+                    src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).length > 0 ? filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join("|") : filtered.map((i:any)=>i.title).slice(0,3).join("|"))}`}
+                    width="100%" height="320" style={{border:0,display:"block"}} allowFullScreen
+                  />
+                </div>
+              )}
 
-          <div className="filter-strip">
-            {['all', 'reel', 'blog', 'social'].map(f => (
-              <button key={f} className={`filter-btn${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
-                {f === 'all' ? '全部' : f === 'reel' ? 'IG Reel' : f === 'blog' ? '文章 / Blog' : 'Social'}
-              </button>
-            ))}
-            <span className="filter-divider" />
-            {['HK', 'TW', 'JP', 'KR', 'US'].map(c => (
-              <button key={c} className={`filter-btn${filter === 'country-' + c ? ' active' : ''}`} onClick={() => setFilter('country-' + c)}>
-                {COUNTRIES[c].split(' ')[0]} {c}
-              </button>
-            ))}
-          </div>
+              <div className="filter-strip">
+                {['all', 'reel', 'blog', 'social'].map(f => (
+                  <button key={f} className={`filter-btn${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
+                    {f === 'all' ? '全部' : f === 'reel' ? 'IG Reel' : f === 'blog' ? '文章 / Blog' : 'Social'}
+                  </button>
+                ))}
+                <span className="filter-divider" />
+                {['HK', 'TW', 'JP', 'KR', 'US'].map(c => (
+                  <button key={c} className={`filter-btn${filter === 'country-' + c ? ' active' : ''}`} onClick={() => setFilter('country-' + c)}>
+                    {COUNTRIES[c].split(' ')[0]} {c}
+                  </button>
+                ))}
+              </div>
 
-          <div className="content-grid">
-            <section className="board-panel" ref={workRef}>
+              <div className="content-grid">
+                <section className="board-panel" ref={workRef}>
               {ideasLoading ? (
                 <div className="empty-state">
                   <div className="empty-title">載入中...</div>
@@ -815,8 +836,20 @@ export default function Home() {
                   </div>
                 </div>
               )}
+                </section>
+              </div>
+            </>
+          ) : (
+            <section className="explore-placeholder">
+              <p className="explore-title">發掘熱門題材</p>
+              <p className="explore-copy">輸入關鍵字，AI 幫你搵 IG / YouTube 最新爆款題材方向</p>
+              <div className="explore-search">
+                <input className="explore-input" placeholder="例：香港咖啡店、日本旅行、美食探店…" />
+                <button className="explore-button" type="button">搜尋</button>
+              </div>
+              <p className="explore-note">即將推出 — AI 題材發掘功能開發中</p>
             </section>
-          </div>
+          )}
         </main>
 
         {detailIdea && (
@@ -925,6 +958,14 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .detail-section:last-child{border-bottom:0;padding-bottom:0}
 .detail-metrics{display:grid;grid-template-columns:1fr;gap:8px}
 .detail-link-group{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.explore-placeholder{padding:48px 0;text-align:center}
+.explore-title{font-size:24px;font-weight:600;color:var(--text-primary)}
+.explore-copy{font-size:14px;color:var(--text-secondary);margin-top:8px}
+.explore-search{margin:24px auto 0;display:flex;gap:8px;max-width:480px}
+.explore-input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary);font-family:var(--sans);font-size:13px;outline:none}
+.explore-input:focus{border-color:var(--accent)}
+.explore-button{padding:10px 20px;background:var(--accent);color:white;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px}
+.explore-note{font-size:12px;color:var(--text-muted);margin-top:16px}
 .workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;color:var(--text-primary);cursor:pointer}
 .workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:var(--radius);background:var(--bg-card-hover);border:1px solid var(--border-subtle);font-size:10px;font-weight:600;letter-spacing:0.12em;line-height:1;color:var(--accent)}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
@@ -942,6 +983,10 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .ghost-top-btn,.primary-top-btn{border:none;border-radius:var(--radius);padding:12px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .ghost-top-btn{background:transparent;border:1px solid var(--border-default);color:var(--text-primary)}
 .primary-top-btn{background:var(--accent);color:white;box-shadow:none}
+.tab-bar{display:flex;align-items:center;gap:24px;margin-top:18px;border-bottom:1px solid var(--border-subtle)}
+.tab-btn{position:relative;border:0;background:transparent;color:var(--text-secondary);font-family:var(--sans);font-size:14px;font-weight:500;padding:0 0 12px;cursor:pointer}
+.tab-btn.active{color:var(--text-primary);font-weight:600}
+.tab-btn.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:999px}
 .hero-row{display:grid;grid-template-columns:1fr;gap:18px}
 .hero-card{border-radius:var(--radius-md);border:1px solid var(--border-subtle);padding:24px;background:var(--bg-card)}
 .hero-card-primary{background:var(--bg-card)}
