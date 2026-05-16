@@ -175,9 +175,15 @@ export default function Home() {
           data = payload.ideas
         } else {
           const supabase = createClient()
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user) {
+            throw new Error('請先登入')
+          }
+
           const { data: fallbackData, error } = await supabase
             .from('ideas')
             .select('*')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
 
           if (error) {
@@ -313,13 +319,17 @@ export default function Home() {
 
   async function deleteIdeaFromSupabase(id: any) {
     const supabase = createClient()
-    await supabase.from('ideas').delete().eq('id', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not logged in')
+    await supabase.from('ideas').delete().eq('id', id).eq('user_id', user.id)
   }
 
   async function saveNote(id: any, note: string) {
     setSavingNote(id)
     const supabase = createClient()
-    await supabase.from('ideas').update({ notes: note }).eq('id', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not logged in')
+    await supabase.from('ideas').update({ notes: note }).eq('id', id).eq('user_id', user.id)
     setSavingNote(null)
   }
 
@@ -330,7 +340,12 @@ export default function Home() {
       return
     }
     const supabase = createClient()
-    const { error } = await supabase.from('ideas').update({ title: nextTitle }).eq('id', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      showNotif('請先登入', 'error')
+      return
+    }
+    const { error } = await supabase.from('ideas').update({ title: nextTitle }).eq('id', id).eq('user_id', user.id)
     if (error) {
       showNotif('更新題目失敗，請重試', 'error')
       return
