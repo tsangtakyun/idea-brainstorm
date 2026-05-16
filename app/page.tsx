@@ -252,20 +252,46 @@ export default function Home() {
       setIdeasLoading(false)
     }
 
+    const loadIdeasWithToken = async (accessToken: string) => {
+      try {
+        const res = await fetch('/api/ideas', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        const payload = await res.json()
+        if (!res.ok) throw new Error(payload.error || '讀取 ideas 失敗')
+
+        const data = Array.isArray(payload.ideas) ? payload.ideas : []
+        setIdeas(normalizeIdeas(data))
+        const initialNotes: Record<string, string> = {}
+        data.forEach((d: any) => {
+          if (d.notes) initialNotes[d.id] = d.notes
+        })
+        setNotes(initialNotes)
+        setIdeasLoading(false)
+      } catch (err) {
+        setIdeas([])
+        setNotes({})
+        setIdeasLoading(false)
+        showNotif(err instanceof Error ? err.message : '讀取 ideas 失敗', 'error')
+      }
+    }
+
     const applySoonAuth = async (payload: any) => {
       const accessToken = payload?.accessToken || payload?.token
       const refreshToken = payload?.refreshToken
-      if (!accessToken || !refreshToken) return
+      if (!accessToken) {
+        setIdeasLoading(false)
+        return
+      }
 
       const supabase = createClient()
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      })
-
-      if (!error) {
-        void loadIdeasForCurrentSession()
+      if (refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
       }
+      void loadIdeasWithToken(accessToken)
     }
 
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -276,7 +302,7 @@ export default function Home() {
         void applySoonAuth(payload)
         window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
       } catch {
-        // Ignore malformed auth payloads and wait for postMessage fallback.
+        setIdeasLoading(false)
       }
     }
 

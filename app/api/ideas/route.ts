@@ -1,12 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 import { createAdminSupabase } from '@/lib/admin-supabase'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
+  const bearerToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const authSupabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,9 +20,15 @@ export async function GET(_request: NextRequest) {
     }
   )
 
-  const { data: { user }, error: authError } = await authSupabase.auth.getUser()
+  const { data: { user }, error: authError } = bearerToken
+    ? await createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ).auth.getUser(bearerToken)
+    : await authSupabase.auth.getUser()
+
   if (authError || !user) {
-    return NextResponse.json({ error: '未登入' }, { status: 401 })
+    return NextResponse.json({ error: '請先登入' }, { status: 401 })
   }
 
   const supabase = createAdminSupabase()
