@@ -807,24 +807,22 @@ export default function Home() {
               <div className="brand-label">SOON 創意營運</div>
               <h1 className="page-title">IG reel 題材靈感工作台</h1>
               <div className="header-meta">{ideasLoading ? '正在同步資料...' : `目前已整理 ${ideas.length} 個靈感素材`}</div>
-              <div className="tab-bar">
-                <button
-                  className={`tab-btn${activeTab === 'my-ideas' ? ' active' : ''}`}
-                  type="button"
-                  onClick={() => setActiveTab('my-ideas')}
-                >
-                  我的靈感庫
-                </button>
-                <button
-                  className={`tab-btn${activeTab === 'explore' ? ' active' : ''}`}
-                  type="button"
-                  onClick={() => setActiveTab('explore')}
-                >
-                  發掘題材
-                </button>
-              </div>
             </div>
             <div className="workspace-actions">
+              <button
+                className={`tab-action-btn tab-action-my${activeTab === 'my-ideas' ? ' active' : ''}`}
+                type="button"
+                onClick={() => setActiveTab('my-ideas')}
+              >
+                我的靈感庫
+              </button>
+              <button
+                className={`tab-action-btn tab-action-explore${activeTab === 'explore' ? ' active' : ''}`}
+                type="button"
+                onClick={() => setActiveTab('explore')}
+              >
+                發掘題材
+              </button>
               <button className="ghost-top-btn" onClick={()=>setShowWorldMap(v=>!v)}>
                 {showWorldMap ? '收起地圖' : '打開地圖'}
               </button>
@@ -841,8 +839,12 @@ export default function Home() {
               <section className="hero-row" ref={homeRef}>
                 <div className="hero-card hero-card-primary">
                   <div className="hero-eyebrow">今日概況</div>
-                  <div className="hero-title">集中管理連結、AI 分析與題材方向，讓前期研究更像真正工作台。</div>
-                  <div className="hero-copy">由連結自動分析、地區標記、爆款評分到腳本前置筆記，全部可直接留在同一個內部 board 裡處理。</div>
+                  <div className="hero-title">每個人都需要建立自己的題材庫</div>
+                  <div className="hero-copy hero-steps">
+                    <div><span>01 ·</span> 貼入連結，讓我們自動分析題材、地區、爆款潛力</div>
+                    <div><span>02 ·</span> 或去「發掘題材」輸入關鍵字，讓我們幫你找尋爆款方向</div>
+                    <div><span>03 ·</span> 儲存後一鍵推去劇本生成，直接開始創作</div>
+                  </div>
                 </div>
               </section>
 
@@ -1221,20 +1223,22 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .header-meta{font-size:13px;color:var(--text3);font-weight:400;margin-top:8px}
 .main-panel{width:100%;padding:24px;display:flex;flex-direction:column;gap:18px}
 .workspace-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
-.workspace-actions{display:flex;gap:10px;align-items:center}
+.workspace-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .ghost-top-btn,.primary-top-btn{border:none;border-radius:var(--radius);padding:12px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .ghost-top-btn{background:transparent;border:1px solid var(--border-default);color:var(--text-primary)}
 .primary-top-btn{background:var(--accent);color:white;box-shadow:none}
-.tab-bar{display:flex;align-items:center;gap:24px;margin-top:18px;border-bottom:1px solid var(--border-subtle)}
-.tab-btn{position:relative;border:0;background:transparent;color:var(--text-secondary);font-family:var(--sans);font-size:14px;font-weight:500;padding:0 0 12px;cursor:pointer}
-.tab-btn.active{color:var(--text-primary);font-weight:600}
-.tab-btn.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:999px}
+.tab-action-btn{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:8px;padding:8px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s,color 0.15s,border-color 0.15s}
+.tab-action-btn:hover,.ghost-top-btn:hover,.primary-top-btn:hover{transform:translateY(-1px)}
+.tab-action-my.active{background:#7c5cfc;color:white;border-color:#7c5cfc}
+.tab-action-explore.active{background:#f59e0b;color:white;border-color:#f59e0b}
 .hero-row{display:grid;grid-template-columns:1fr;gap:18px}
 .hero-card{border-radius:var(--radius-md);border:1px solid var(--border-subtle);padding:24px;background:var(--bg-card)}
 .hero-card-primary{background:var(--bg-card)}
 .hero-eyebrow{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
-.hero-title{font-size:28px;line-height:1.15;font-weight:600;max-width:720px;color:var(--text-primary)}
+.hero-title{font-size:20px;line-height:1.25;font-weight:600;max-width:720px;color:var(--text-primary)}
 .hero-copy{margin-top:12px;color:var(--text2);max-width:760px}
+.hero-steps{font-size:14px;color:var(--text-secondary);line-height:2}
+.hero-steps span{color:var(--accent);font-weight:600}
 .board-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px}
 .gallery-title{font-size:18px;color:var(--text-primary);font-weight:600}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
