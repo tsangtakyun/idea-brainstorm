@@ -106,6 +106,10 @@ export default function Home() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideasLoading, setIdeasLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'my-ideas' | 'explore'>('my-ideas');
+  const [exploreKeyword, setExploreKeyword] = useState('');
+  const [exploreResults, setExploreResults] = useState<any[]>([]);
+  const [exploreLoading, setExploreLoading] = useState(false);
+  const [exploreError, setExploreError] = useState('');
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('date');
   const [search, setSearch] = useState('');
@@ -425,6 +429,43 @@ export default function Home() {
       setStatusSteps(null);
     }
     setIsLoading(false);
+  }
+
+  async function handleExplore() {
+    const keyword = exploreKeyword.trim();
+    if (!keyword || exploreLoading) return;
+    setExploreLoading(true);
+    setExploreResults([]);
+    setExploreError('');
+    try {
+      const res = await fetch('/api/explore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '未能生成建議，請重試');
+      setExploreResults(Array.isArray(data.directions) ? data.directions : []);
+    } catch (err) {
+      setExploreResults([]);
+      setExploreError(err instanceof Error ? err.message : '未能生成建議，請重試');
+    }
+    setExploreLoading(false);
+  }
+
+  function addExploreDirection(dir: any) {
+    const tags = Array.isArray(dir.tags) ? dir.tags.join(' / ') : '';
+    setCustomTitle(dir.title || '');
+    setDesc([
+      dir.angle ? `拍攝角度：${dir.angle}` : '',
+      dir.hook ? `開場 hook：${dir.hook}` : '',
+      tags ? `Tags：${tags}` : '',
+      dir.youtube_query ? `YouTube 參考搜尋：${dir.youtube_query}` : '',
+    ].filter(Boolean).join('\n'));
+    if (['HK', 'TW', 'JP', 'KR'].includes(dir.region)) setCountry(dir.region);
+    setSelectedType('reel');
+    setActiveTab('my-ideas');
+    setInputPanelOpen(true);
   }
 
   const filtered = ideas
@@ -844,10 +885,77 @@ export default function Home() {
               <p className="explore-title">發掘熱門題材</p>
               <p className="explore-copy">輸入關鍵字，AI 幫你搵 IG / YouTube 最新爆款題材方向</p>
               <div className="explore-search">
-                <input className="explore-input" placeholder="例：香港咖啡店、日本旅行、美食探店…" />
-                <button className="explore-button" type="button">搜尋</button>
+                <input
+                  className="explore-input"
+                  placeholder="例：香港咖啡店、日本旅行、美食探店…"
+                  value={exploreKeyword}
+                  onChange={e => setExploreKeyword(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleExplore();
+                  }}
+                />
+                <button className="explore-button" type="button" onClick={handleExplore} disabled={exploreLoading}>
+                  {exploreLoading ? '分析中…' : '搜尋'}
+                </button>
               </div>
-              <p className="explore-note">即將推出 — AI 題材發掘功能開發中</p>
+              {!exploreLoading && !exploreError && exploreResults.length === 0 && (
+                <p className="explore-note">即將推出 — AI 題材發掘功能開發中</p>
+              )}
+              {exploreLoading && (
+                <div className="explore-loading">
+                  <p>🤖 Claude 分析題材方向中…</p>
+                  <p>📺 搜尋 YouTube 爆款例子…</p>
+                </div>
+              )}
+              {exploreError && <p className="explore-error">{exploreError}</p>}
+              {exploreResults.length > 0 && (
+                <div className="explore-results">
+                  {exploreResults.map((dir, idx) => (
+                    <article className="explore-card" key={`${dir.title || 'direction'}-${idx}`}>
+                      <div className="explore-card-top">
+                        <div>
+                          <h2 className="explore-card-title">{dir.title}</h2>
+                          <p className="explore-card-angle">{dir.angle}</p>
+                          {dir.hook && <p className="explore-card-hook">💡 開場：{dir.hook}</p>}
+                          <div className="explore-tags">
+                            {(dir.tags || []).map((tag: string) => (
+                              <span className="explore-tag" key={tag}>{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="explore-score">
+                          <span>{dir.region || '通用'}</span>
+                          <strong>{dir.viral_potential || 0}</strong>
+                        </div>
+                      </div>
+                      <div className="explore-videos">
+                        <div className="explore-video-label">參考例子</div>
+                        {dir.videos?.length ? (
+                          <div className="youtube-grid">
+                            {dir.videos.map((video: any) => (
+                              <button
+                                className="youtube-card"
+                                key={video.id}
+                                type="button"
+                                onClick={() => window.open(video.url, '_blank')}
+                              >
+                                {video.thumb && <img src={video.thumb} alt="" />}
+                                <div className="youtube-title">{video.title}</div>
+                                <div className="youtube-channel">{video.channel}</div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="explore-empty-video">暫無參考影片</p>
+                        )}
+                      </div>
+                      <button className="explore-add-btn" type="button" onClick={() => addExploreDirection(dir)}>
+                        + 加入我的靈感庫
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           )}
         </main>
@@ -965,7 +1073,31 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .explore-input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary);font-family:var(--sans);font-size:13px;outline:none}
 .explore-input:focus{border-color:var(--accent)}
 .explore-button{padding:10px 20px;background:var(--accent);color:white;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px}
+.explore-button:disabled{opacity:.65;cursor:not-allowed}
 .explore-note{font-size:12px;color:var(--text-muted);margin-top:16px}
+.explore-loading{margin-top:24px;color:var(--text-secondary);font-size:14px;line-height:1.9}
+.explore-error{margin-top:20px;color:#ff9f8f;font-size:13px}
+.explore-results{max-width:980px;margin:32px auto 0;text-align:left}
+.explore-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:20px;margin-bottom:16px}
+.explore-card-top{display:flex;justify-content:space-between;gap:18px}
+.explore-card-title{font-size:18px;font-weight:600;color:var(--text-primary);line-height:1.3}
+.explore-card-angle{font-size:13px;color:var(--text-secondary);margin-top:6px}
+.explore-card-hook{font-size:12px;color:var(--accent);margin-top:8px}
+.explore-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.explore-tag{font-size:10px;padding:4px 9px;background:var(--tag-bg);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-secondary)}
+.explore-score{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:70px;color:var(--accent);font-size:11px;font-weight:600}
+.explore-score strong{font-size:24px;line-height:1}
+.explore-videos{border-top:1px solid var(--border-subtle);margin-top:16px;padding-top:16px}
+.explore-video-label{font-size:12px;color:var(--text-muted);margin-bottom:10px}
+.youtube-grid{display:flex;gap:10px}
+.youtube-card{flex:1;min-width:0;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;text-align:left;cursor:pointer;color:var(--text-primary);font-family:var(--sans);padding:0}
+.youtube-card:hover{background:var(--bg-card-hover)}
+.youtube-card img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.youtube-title{font-size:11px;line-height:1.35;padding:6px 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.youtube-channel{font-size:10px;color:var(--text-muted);padding:0 8px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.explore-empty-video{color:var(--text-muted);font-size:12px}
+.explore-add-btn{width:100%;margin-top:16px;background:var(--accent);color:white;border:0;border-radius:8px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer}
+.explore-add-btn:hover{background:var(--accent-hover)}
 .workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;color:var(--text-primary);cursor:pointer}
 .workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:var(--radius);background:var(--bg-card-hover);border:1px solid var(--border-subtle);font-size:10px;font-weight:600;letter-spacing:0.12em;line-height:1;color:var(--accent)}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
