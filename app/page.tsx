@@ -125,6 +125,7 @@ export default function Home() {
   const [inputPanelOpen, setInputPanelOpen] = useState(false);
   const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null);
   const [soonAccessToken, setSoonAccessToken] = useState('');
+  const [workspaceId, setWorkspaceId] = useState('');
   const [aiDetail, setAiDetail] = useState('');
   const [aiDetailLoading, setAiDetailLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -168,6 +169,7 @@ export default function Home() {
       lat: d.lat ?? null,
       lng: d.lng ?? null,
       notes: d.notes ?? null,
+      workspace_id: d.workspace_id ?? null,
     }))
   }
 
@@ -178,7 +180,8 @@ export default function Home() {
       let data: any[] = []
 
       try {
-        const res = await fetch('/api/ideas')
+        const ideasUrl = workspaceId ? `/api/ideas?workspace_id=${encodeURIComponent(workspaceId)}` : '/api/ideas'
+        const res = await fetch(ideasUrl)
         const payload = await res.json()
         if (res.ok && Array.isArray(payload.ideas) && payload.ideas.length > 0) {
           data = payload.ideas
@@ -189,11 +192,14 @@ export default function Home() {
             throw new Error('請先登入')
           }
 
-          const { data: fallbackData, error } = await supabase
+          let fallbackQuery = supabase
             .from('ideas')
             .select('*')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
+
+          if (workspaceId) fallbackQuery = fallbackQuery.eq('workspace_id', workspaceId)
+
+          const { data: fallbackData, error } = await fallbackQuery.order('created_at', { ascending: false })
 
           if (error) {
             throw new Error(payload.error || error.message || '讀取 ideas 失敗')
@@ -226,7 +232,7 @@ export default function Home() {
       setIdeasLoading(false)
     }
     fetchIdeas()
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => {
     const loadIdeasForCurrentSession = async () => {
@@ -234,11 +240,14 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('ideas')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+
+      if (workspaceId) query = query.eq('workspace_id', workspaceId)
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) {
         showNotif(error.message || '讀取 ideas 失敗', 'error')
@@ -254,9 +263,10 @@ export default function Home() {
       setIdeasLoading(false)
     }
 
-    const loadIdeasWithToken = async (accessToken: string) => {
+    const loadIdeasWithToken = async (accessToken: string, nextWorkspaceId = workspaceId) => {
       try {
-        const res = await fetch('/api/ideas', {
+        const ideasUrl = nextWorkspaceId ? `/api/ideas?workspace_id=${encodeURIComponent(nextWorkspaceId)}` : '/api/ideas'
+        const res = await fetch(ideasUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         const payload = await res.json()
@@ -281,12 +291,14 @@ export default function Home() {
     const applySoonAuth = async (payload: any) => {
       const accessToken = payload?.accessToken || payload?.token
       const refreshToken = payload?.refreshToken
+      const nextWorkspaceId = payload?.workspaceId || ''
       if (!accessToken) {
         setIdeasLoading(false)
         return
       }
 
       setSoonAccessToken(accessToken)
+      setWorkspaceId(nextWorkspaceId)
       const supabase = createClient()
       if (refreshToken) {
         await supabase.auth.setSession({
@@ -294,7 +306,7 @@ export default function Home() {
           refresh_token: refreshToken,
         })
       }
-      void loadIdeasWithToken(accessToken)
+      void loadIdeasWithToken(accessToken, nextWorkspaceId)
     }
 
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -414,7 +426,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${soonAccessToken}`,
         },
-        body: JSON.stringify(idea),
+        body: JSON.stringify({ ...idea, workspace_id: workspaceId || null }),
       })
       const payload = await res.json()
       if (!res.ok) throw new Error(payload.error || 'Save failed')
@@ -426,6 +438,7 @@ export default function Home() {
     if (!user) throw new Error('Not logged in')
     const { data, error } = await supabase.from('ideas').insert({
       user_id: user.id,
+      workspace_id: workspaceId || null,
       type: idea.type,
       url: idea.url,
       thumb: idea.thumb,
