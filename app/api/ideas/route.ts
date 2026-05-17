@@ -43,15 +43,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Supabase admin 未設定' }, { status: 500 })
   }
 
-  const workspaceId = request.nextUrl.searchParams.get('workspace_id')
-  let query = supabase
+  const { data, error } = await supabase
     .from('ideas')
     .select('*')
     .eq('user_id', user.id)
-
-  if (workspaceId) query = query.eq('workspace_id', workspaceId)
-
-  const { data, error } = await query.order('created_at', { ascending: false })
+    .order('created_at', { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -77,7 +73,6 @@ export async function POST(request: NextRequest) {
     .from('ideas')
     .insert({
       user_id: user.id,
-      workspace_id: idea.workspace_id || null,
       type: idea.type,
       url: idea.url,
       thumb: idea.thumb,
