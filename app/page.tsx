@@ -897,7 +897,7 @@ export default function Home() {
             <>
               <section className="hero-row" ref={homeRef}>
                 <img
-                  src="/hero-banner.png"
+                  src="/hero-banner.jpg"
                   alt="每個人都需要建立自己的題材庫"
                   style={{
                     width: '100%',
