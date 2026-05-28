@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchLinkMetadata } from '@/lib/linkMetadata'
+import { fetchLinkMetadata, normalizeLinkMetadataUrl } from '@/lib/linkMetadata'
+import { resolveSocialVideo } from '@/lib/socialVideoResolver'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -13,9 +14,10 @@ const SUPPORTED_COUNTRY_VALUES = new Set([
 function normalizeUrl(input: string) {
   const trimmed = input.trim()
   if (!trimmed) return ''
-  return trimmed.startsWith('http://') || trimmed.startsWith('https://')
+  const url = trimmed.startsWith('http://') || trimmed.startsWith('https://')
     ? trimmed
     : `https://${trimmed}`
+  return normalizeLinkMetadataUrl(url)
 }
 
 function inferPlatform(hostname: string) {
@@ -40,6 +42,24 @@ function buildMetadataBlockedDesc(platform: string) {
         : '呢條連結'
 
   return `${platformLabel} 呢類連結經常攔截公開 metadata，所以目前未能直接讀到標題、描述或封面。建議你補一張截圖，或者手動寫一兩句內容重點，我先可以更準確判斷地區、題材同爆點。`
+}
+
+function normalizeSharedCaption(value: unknown) {
+  if (typeof value !== 'string') return ''
+  const text = value.trim()
+  if (!text || /^https?:\/\/\S+$/i.test(text)) return ''
+  if (text.length < 8) return ''
+  return text.slice(0, 4000)
+}
+
+function isGenericSocialTitle(value: string) {
+  const text = value.trim().toLowerCase()
+  return !text ||
+    text === 'instagram' ||
+    text === 'instagram reel' ||
+    text === 'instagram reels' ||
+    text === 'tiktok' ||
+    text === 'xiaohongshu'
 }
 
 function extractMeta(html: string, key: string) {
@@ -154,24 +174,36 @@ Infer the most likely country/region and content type. If there is a place, shop
 
 export async function POST(req: NextRequest) {
   try {
-    const { url } = await req.json()
+    const body = await req.json()
+    const { url } = body
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL required' }, { status: 400 })
     }
+    const sharedCaption = normalizeSharedCaption(body.caption ?? body.sharedText ?? body.text)
 
     const normalizedUrl = normalizeUrl(url)
     const parsedUrl = new URL(normalizedUrl)
     const platform = inferPlatform(parsedUrl.hostname.replace('www.', ''))
-    const metadata = await fetchLinkMetadata(normalizedUrl)
-    const metadataBlocked = !metadata?.title && !metadata?.description && !metadata?.image
+    const [metadata, resolved] = await Promise.all([
+      fetchLinkMetadata(normalizedUrl),
+      resolveSocialVideo(normalizedUrl),
+    ])
+    const rawTitle = resolved?.title || metadata?.title || ''
+    const metadataCaption = metadata?.caption || metadata?.description || ''
+    const description = sharedCaption || resolved?.description || metadataCaption || ''
+    const title = isGenericSocialTitle(rawTitle) && sharedCaption ? '' : rawTitle
+    const image = resolved?.image || resolved?.thumbnail || metadata?.image || ''
+    const video = resolved?.videoUrl || metadata?.video || ''
+    const metadataBlocked = metadata?.metadataBlocked ?? (!rawTitle && !description && !image)
+    const effectiveMetadataBlocked = metadataBlocked && !sharedCaption
 
-    const aiFields = metadataBlocked
+    const aiFields = effectiveMetadataBlocked
       ? null
       : await inferFields({
           url: normalizedUrl,
           platform,
-          title: metadata?.title || '',
-          description: metadata?.description || '',
+          title,
+          description,
         })
 
     const fallbackTags = platform === 'instagram' || platform === 'tiktok' || platform === 'xiaohongshu'
@@ -182,20 +214,25 @@ export async function POST(req: NextRequest) {
       url: normalizedUrl,
       platform,
       contentType: aiFields?.contentType || inferType(platform),
-      country: aiFields?.country || '',
-      placeName: aiFields?.placeName || '',
-      placeAddress: aiFields?.placeAddress || '',
-      desc: aiFields?.desc || metadata?.description || (metadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
+      country: aiFields?.country || resolved?.country || '',
+      placeName: aiFields?.placeName || resolved?.placeName || '',
+      placeAddress: aiFields?.placeAddress || resolved?.placeAddress || '',
+      desc: aiFields?.desc || description || (effectiveMetadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
       tags: aiFields?.tags || fallbackTags,
-      image: metadata?.image || '',
-      video_url: metadata?.video || '',
-      videoUrl: metadata?.video || '',
-      media_url: metadata?.video || '',
-      thumbnail: metadata?.image || '',
-      thumbnail_url: metadata?.image || '',
-      title: metadata?.title || '',
-      metadataDescription: metadata?.description || '',
-      metadataBlocked,
+      image,
+      video_url: video,
+      videoUrl: video,
+      media_url: video,
+      playback_url: video,
+      hls_url: video,
+      thumbnail: image,
+      thumbnail_url: image,
+      title: title || rawTitle,
+      caption: sharedCaption || metadata?.caption || '',
+      metadataDescription: description,
+      metadataBlocked: effectiveMetadataBlocked,
+      metadataSource: metadata?.source || '',
+      provider: resolved?.provider || '',
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
