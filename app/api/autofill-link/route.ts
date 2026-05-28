@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { fetchLinkMetadata } from '@/lib/linkMetadata'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
     const normalizedUrl = normalizeUrl(url)
     const parsedUrl = new URL(normalizedUrl)
     const platform = inferPlatform(parsedUrl.hostname.replace('www.', ''))
-    const metadata = await fetchMetadata(normalizedUrl)
+    const metadata = await fetchLinkMetadata(normalizedUrl)
     const metadataBlocked = !metadata?.title && !metadata?.description && !metadata?.image
 
     const aiFields = metadataBlocked
@@ -187,6 +188,11 @@ export async function POST(req: NextRequest) {
       desc: aiFields?.desc || metadata?.description || (metadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
       tags: aiFields?.tags || fallbackTags,
       image: metadata?.image || '',
+      video_url: metadata?.video || '',
+      videoUrl: metadata?.video || '',
+      media_url: metadata?.video || '',
+      thumbnail: metadata?.image || '',
+      thumbnail_url: metadata?.image || '',
       title: metadata?.title || '',
       metadataDescription: metadata?.description || '',
       metadataBlocked,
