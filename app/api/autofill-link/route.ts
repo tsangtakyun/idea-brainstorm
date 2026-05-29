@@ -62,6 +62,29 @@ function isGenericSocialTitle(value: string) {
     text === 'xiaohongshu'
 }
 
+function cleanDisplayTitle(value: string, platform: string, caption: string) {
+  const title = value
+    .split(/\s+(?:on|在)\s+Instagram\s*:/i)[0]
+    ?.replace(/\s+(?:on|在)\s+Instagram$/i, '')
+    .trim() || ''
+
+  if (title && !isGenericSocialTitle(title)) return title
+
+  const captionLead = caption
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean)
+
+  if (captionLead && !/^https?:\/\//i.test(captionLead)) {
+    return captionLead.slice(0, 80)
+  }
+
+  if (platform === 'instagram') return 'Instagram Reel 靈感'
+  if (platform === 'tiktok') return 'TikTok 靈感'
+  if (platform === 'xiaohongshu') return '小紅書靈感'
+  return ''
+}
+
 function extractMeta(html: string, key: string) {
   const regexes = [
     new RegExp(`<meta[^>]+property=["']${key}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
@@ -145,7 +168,14 @@ Platform: ${params.platform}
 Title: ${params.title || '(none)'}
 Description: ${params.description || '(none)'}
 
-Infer the most likely country/region and content type. If there is a place, shop, or brand, extract it.`
+The description may be a full Instagram/TikTok/Xiaohongshu caption with mixed languages, hashtags, address, business hours, station information, phone numbers, menu items, and prices.
+
+Infer the most likely country/region and content type.
+If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
+- placeName must be the official name from the caption when possible, not just "Instagram".
+- placeAddress should copy the most precise address/district/city text found in the caption. Do not invent an address.
+- desc should summarize the actual content in Traditional Chinese for a Hong Kong creator, not say metadata is missing if the description contains caption text.
+- tags should describe the content and location, using short lowercase tags.`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -188,10 +218,10 @@ export async function POST(req: NextRequest) {
       fetchLinkMetadata(normalizedUrl),
       resolveSocialVideo(normalizedUrl),
     ])
-    const rawTitle = resolved?.title || metadata?.title || ''
     const metadataCaption = metadata?.caption || metadata?.description || ''
     const description = sharedCaption || resolved?.description || metadataCaption || ''
-    const title = isGenericSocialTitle(rawTitle) && sharedCaption ? '' : rawTitle
+    const rawTitle = resolved?.title || metadata?.title || ''
+    const title = cleanDisplayTitle(rawTitle, platform, description)
     const image = resolved?.image || resolved?.thumbnail || metadata?.image || ''
     const video = resolved?.videoUrl || metadata?.video || ''
     const metadataBlocked = metadata?.metadataBlocked ?? (!rawTitle && !description && !image)
@@ -227,7 +257,7 @@ export async function POST(req: NextRequest) {
       hls_url: video,
       thumbnail: image,
       thumbnail_url: image,
-      title: title || rawTitle,
+      title: aiFields?.placeName || title || (isGenericSocialTitle(rawTitle) ? '' : rawTitle),
       caption: sharedCaption || metadata?.caption || '',
       metadataDescription: description,
       metadataBlocked: effectiveMetadataBlocked,

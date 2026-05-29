@@ -9,14 +9,61 @@ export type LinkMetadata = {
   url?: string
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  nbsp: ' ',
+  ndash: '–',
+  mdash: '—',
+  hellip: '…',
+  lsquo: '‘',
+  rsquo: '’',
+  ldquo: '“',
+  rdquo: '”',
+}
+
+function decodeHtmlEntity(entity: string) {
+  if (entity.startsWith('#x') || entity.startsWith('#X')) {
+    const codePoint = Number.parseInt(entity.slice(2), 16)
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : `&${entity};`
+  }
+
+  if (entity.startsWith('#')) {
+    const codePoint = Number.parseInt(entity.slice(1), 10)
+    return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : `&${entity};`
+  }
+
+  return HTML_ENTITIES[entity] ?? `&${entity};`
+}
+
 function decodeHtml(text: string) {
-  return text
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
+  let output = text
+
+  for (let i = 0; i < 3; i += 1) {
+    const next = output.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z][a-zA-Z0-9]+);/g, (_, entity) =>
+      decodeHtmlEntity(entity),
+    )
+    if (next === output) break
+    output = next
+  }
+
+  return output.trim()
+}
+
+function normalizePlainText(text: string) {
+  return decodeHtml(text).replace(/[ \t\f\v]+/g, ' ').trim()
+}
+
+function normalizeCaptionText(text: string) {
+  return decodeHtml(text)
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t\f\v]+/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
@@ -138,10 +185,44 @@ function cleanInstagramCaption(description: string) {
   const withoutPrefix = stripInstagramPrefix(decoded)
   const quoted = extractQuotedText(withoutPrefix)
 
-  return quoted
-    .replace(/\s*View all comments\s*$/i, '')
-    .replace(/\s+/g, ' ')
+  return normalizeCaptionText(quoted.replace(/\s*View all comments\s*$/i, ''))
+}
+
+function cleanInstagramTitle(rawTitle: string, caption = '') {
+  const decoded = normalizePlainText(rawTitle)
+  const titleBeforeInstagram = decoded.split(/\s+(?:on|在)\s+Instagram\s*:/i)[0]?.trim() || ''
+  const withoutSuffix = titleBeforeInstagram
+    .replace(/\s+(?:on|在)\s+Instagram$/i, '')
     .trim()
+
+  if (withoutSuffix && !/^instagram$/i.test(withoutSuffix)) return withoutSuffix
+
+  const firstCaptionLine = normalizeCaptionText(caption)
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean)
+
+  return firstCaptionLine || decoded
+}
+
+function normalizeMetadata(metadata: LinkMetadata): LinkMetadata {
+  const caption = metadata.caption ? normalizeCaptionText(metadata.caption) : ''
+  const description = metadata.description ? normalizeCaptionText(metadata.description) : ''
+  const normalizedUrl = metadata.url ? normalizeLinkMetadataUrl(metadata.url) : metadata.url
+  const isInstagram = normalizedUrl ? isInstagramUrl(normalizedUrl) : false
+  const title = isInstagram
+    ? cleanInstagramTitle(metadata.title, caption || description)
+    : normalizePlainText(metadata.title)
+
+  return {
+    ...metadata,
+    title,
+    description,
+    caption,
+    image: metadata.image ? decodeHtml(metadata.image) : '',
+    video: metadata.video ? decodeHtml(metadata.video) : '',
+    url: normalizedUrl,
+  }
 }
 
 function extractInlineInstagramCaption(html: string) {
@@ -155,7 +236,7 @@ function extractInlineInstagramCaption(html: string) {
   for (const pattern of patterns) {
     const match = decodedHtml.match(pattern)
     if (match?.[1]) {
-      const caption = decodeHtml(decodeJsString(match[1])).replace(/\s+/g, ' ').trim()
+      const caption = normalizeCaptionText(decodeJsString(match[1]))
       if (caption) return caption
     }
   }
@@ -187,9 +268,10 @@ function parseMetadataFromHtml(html: string, source = 'default', url?: string): 
   const caption = inlineCaption || cleanedCaption
   const description = caption || rawDescription
   const metadataBlocked = isInstagram && !isMeaningfulDescription(description)
+  const rawTitle = extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title') || extractTitle(html)
 
-  return {
-    title: extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title') || extractTitle(html),
+  return normalizeMetadata({
+    title: isInstagram ? cleanInstagramTitle(rawTitle, caption) : rawTitle,
     description: metadataBlocked ? '' : description,
     caption: metadataBlocked ? '' : caption,
     image: extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image'),
@@ -197,7 +279,7 @@ function parseMetadataFromHtml(html: string, source = 'default', url?: string): 
     metadataBlocked,
     source,
     url,
-  }
+  })
 }
 
 function extractTitle(html: string) {
@@ -278,7 +360,7 @@ async function getCachedMetadata(url: string): Promise<LinkMetadata | null> {
 
     const row = data as CachedMetadataRow
     if (!row.expires_at || new Date(row.expires_at).getTime() <= Date.now()) return null
-    return row.metadata || null
+    return row.metadata ? normalizeMetadata(row.metadata) : null
   } catch {
     return null
   }
@@ -290,13 +372,15 @@ async function setCachedMetadata(url: string, metadata: LinkMetadata) {
     const supabase = createAdminSupabase()
     if (!supabase) return
 
+    const normalizedMetadata = normalizeMetadata(metadata)
+
     await supabase
       .from('link_metadata_cache')
       .upsert({
         url,
-        metadata,
-        metadata_blocked: Boolean(metadata.metadataBlocked),
-        source: metadata.source || null,
+        metadata: normalizedMetadata,
+        metadata_blocked: Boolean(normalizedMetadata.metadataBlocked),
+        source: normalizedMetadata.source || null,
         expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
         updated_at: new Date().toISOString(),
       })
