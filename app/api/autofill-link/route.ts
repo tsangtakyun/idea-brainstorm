@@ -155,10 +155,12 @@ async function inferFields(params: {
   const system = `You help enrich short-form content references for SOON Idea Collection.
 Return only valid JSON:
 {
+  "ideaTitle": "short creator-friendly title in Traditional Chinese, 8-20 characters, not a generic platform name",
   "country": "HK | TW | CN | JP | KR | SG | TH | MY | ID | VN | IN | US | GB | AU | CA | FR | DE | OTHER",
   "contentType": "reel | blog | social",
-  "placeName": "shop / brand / venue name if any, else empty string",
-  "placeAddress": "address / district / city if inferable, else empty string",
+  "placeName": "exact shop / restaurant / cafe / hotel / attraction / event official name if any, else empty string",
+  "locationName": "broad location tag, city, district, region, railway line, or landmark area if inferable, else empty string",
+  "placeAddress": "precise street address if present, else empty string",
   "desc": "2-3 sentences in Traditional Chinese, concise, explaining what this content seems to be and why it may work for HK audience",
   "tags": ["food","travel","cafe","lifestyle","relationship","citywalk","microdrama","hook-heavy"]
 }`
@@ -171,9 +173,14 @@ Description: ${params.description || '(none)'}
 The description may be a full Instagram/TikTok/Xiaohongshu caption with mixed languages, hashtags, address, business hours, station information, phone numbers, menu items, and prices.
 
 Infer the most likely country/region and content type.
+Important distinction:
+- ideaTitle is the creator-facing idea title. It should summarize the content idea naturally, e.g. "日本食物模型列車靈感", not just copy an account name or "Instagram".
+- placeName is only for an exact visitable venue/business/attraction/event official name.
+- locationName is for a broad location tag, city, district, region, railway line, or nearby area.
+- If the caption is about a transport line, city, region, or themed experience and there is no exact shop/venue address, keep placeName empty, put the area/line in locationName, and write a useful ideaTitle.
 If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
 - placeName must be the official name from the caption when possible, not just "Instagram".
-- placeAddress should copy the most precise address/district/city text found in the caption. Do not invent an address.
+- placeAddress should copy only the most precise street address found in the caption. Do not invent an address.
 - desc should summarize the actual content in Traditional Chinese for a Hong Kong creator, not say metadata is missing if the description contains caption text.
 - tags should describe the content and location, using short lowercase tags.`
 
@@ -191,9 +198,11 @@ If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
 
   const parsed = JSON.parse(jsonMatch[0])
   return {
+    ideaTitle: typeof parsed.ideaTitle === 'string' ? parsed.ideaTitle.trim() : '',
     country: SUPPORTED_COUNTRY_VALUES.has(parsed.country) ? parsed.country : 'OTHER',
     contentType: SUPPORTED_TYPE_VALUES.has(parsed.contentType) ? parsed.contentType : inferType(params.platform),
     placeName: typeof parsed.placeName === 'string' ? parsed.placeName.trim() : '',
+    locationName: typeof parsed.locationName === 'string' ? parsed.locationName.trim() : '',
     placeAddress: typeof parsed.placeAddress === 'string' ? parsed.placeAddress.trim() : '',
     desc: typeof parsed.desc === 'string' ? parsed.desc.trim() : '',
     tags: Array.isArray(parsed.tags)
@@ -246,7 +255,8 @@ export async function POST(req: NextRequest) {
       contentType: aiFields?.contentType || inferType(platform),
       country: aiFields?.country || resolved?.country || '',
       placeName: aiFields?.placeName || resolved?.placeName || '',
-      placeAddress: aiFields?.placeAddress || resolved?.placeAddress || '',
+      locationName: aiFields?.locationName || '',
+      placeAddress: aiFields?.placeAddress || resolved?.placeAddress || aiFields?.locationName || '',
       desc: aiFields?.desc || description || (effectiveMetadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
       tags: aiFields?.tags || fallbackTags,
       image,
@@ -257,7 +267,7 @@ export async function POST(req: NextRequest) {
       hls_url: video,
       thumbnail: image,
       thumbnail_url: image,
-      title: aiFields?.placeName || title || (isGenericSocialTitle(rawTitle) ? '' : rawTitle),
+      title: aiFields?.ideaTitle || aiFields?.placeName || title || (isGenericSocialTitle(rawTitle) ? '' : rawTitle),
       caption: sharedCaption || metadata?.caption || '',
       metadataDescription: description,
       metadataBlocked: effectiveMetadataBlocked,
