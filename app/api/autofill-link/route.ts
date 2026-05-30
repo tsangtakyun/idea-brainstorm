@@ -161,6 +161,7 @@ Return only valid JSON:
   "placeName": "exact shop / restaurant / cafe / hotel / attraction / event official name if any, else empty string",
   "locationName": "broad location tag, city, district, region, railway line, or landmark area if inferable, else empty string",
   "placeAddress": "precise street address if present, else empty string",
+  "shopHighlights": "if this is a food/drink/place business, 1-2 concise Traditional Chinese sentences about famous dishes, must-try items, signature products, or what it is known for; else empty string",
   "desc": "2-3 sentences in Traditional Chinese, concise, explaining what this content seems to be and why it may work for HK audience",
   "tags": ["food","travel","cafe","lifestyle","relationship","citywalk","microdrama","hook-heavy"]
 }`
@@ -181,12 +182,14 @@ Important distinction:
 If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
 - placeName must be the official name from the caption when possible, not just "Instagram".
 - placeAddress should copy only the most precise street address found in the caption. Do not invent an address.
+- shopHighlights should say what the place is famous for or what viewers should try. Prefer facts from caption/metadata; if placeName is specific enough, use web search to verify signature dishes/items. Do not invent details if uncertain.
 - desc should summarize the actual content in Traditional Chinese for a Hong Kong creator, not say metadata is missing if the description contains caption text.
 - tags should describe the content and location, using short lowercase tags.`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 600,
+    max_tokens: 850,
+    tools: [{ type: 'web_search_20250305', name: 'web_search' } as any],
     system,
     messages: [{ role: 'user', content: user }],
   })
@@ -204,6 +207,7 @@ If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
     placeName: typeof parsed.placeName === 'string' ? parsed.placeName.trim() : '',
     locationName: typeof parsed.locationName === 'string' ? parsed.locationName.trim() : '',
     placeAddress: typeof parsed.placeAddress === 'string' ? parsed.placeAddress.trim() : '',
+    shopHighlights: typeof parsed.shopHighlights === 'string' ? parsed.shopHighlights.trim() : '',
     desc: typeof parsed.desc === 'string' ? parsed.desc.trim() : '',
     tags: Array.isArray(parsed.tags)
       ? parsed.tags.filter((tag: unknown) => typeof tag === 'string').map((tag: string) => tag.trim()).filter(Boolean).slice(0, 6)
@@ -257,6 +261,8 @@ export async function POST(req: NextRequest) {
       placeName: aiFields?.placeName || resolved?.placeName || '',
       locationName: aiFields?.locationName || '',
       placeAddress: aiFields?.placeAddress || resolved?.placeAddress || aiFields?.locationName || '',
+      shopHighlights: aiFields?.shopHighlights || '',
+      shop_highlights: aiFields?.shopHighlights || '',
       desc: aiFields?.desc || description || (effectiveMetadataBlocked ? buildMetadataBlockedDesc(platform) : ''),
       tags: aiFields?.tags || fallbackTags,
       image,
