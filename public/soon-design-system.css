@@ -1,103 +1,152 @@
 :root {
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-card: #16161f;
-  --bg-card-hover: #1c1c28;
-  --border-subtle: #2a2a3a;
-  --border-default: #3a3a50;
-  --accent: #7c5cfc;
-  --accent-hover: #6b4ef0;
-  --text-primary: #f0f0f5;
-  --text-secondary: #9090a8;
-  --text-muted: #5a5a72;
-  --soon-bg: var(--bg-base);
-  --soon-surface: var(--bg-surface);
-  --soon-surface2: var(--bg-card);
-  --soon-border: var(--border-subtle);
-  --soon-purple: var(--accent);
-  --soon-purple-light: #a79cff;
-  --soon-purple-dim: rgba(124,92,252,0.14);
-  --soon-text: var(--text-primary);
-  --soon-text-secondary: var(--text-secondary);
-  --soon-text-muted: var(--text-muted);
-  --soon-success: #34d399;
+  --soon-bg: #f7f5f1;
+  --soon-bg-gradient: linear-gradient(180deg, #faf8f4 0%, #f3efe8 100%);
+  --soon-surface: #fffdf9;
+
+  --soon-text: #1f2328;
+  --soon-text-strong: #191511;
+  --soon-text-secondary: #5d544b;
+  --soon-text-muted: #645b52;
+
+  --soon-accent: #8f4f17;
+  --soon-link: #723b09;
+  --soon-badge-text: #723b09;
+  --soon-badge-bg: #f3eadf;
+
+  --soon-card-bg: rgba(255,255,255,.88);
+  --soon-card-border: #ded3c5;
+  --soon-card-shadow: 0 18px 42px rgba(53,38,22,.07);
+  --soon-card-shadow-hover: 0 22px 48px rgba(53,38,22,.11);
+
+  --soon-input-bg: #fffdf9;
+  --soon-input-border: #d6c8b8;
+  --soon-input-hover: #a86a2a;
+  --soon-input-focus: #9a5c1d;
+  --soon-input-focus-ring: rgba(154,92,29,.12);
+
+  --soon-btn-primary-bg: #2f241c;
+  --soon-btn-primary-border: #2f241c;
+  --soon-btn-primary-text: #ffffff;
+  --soon-btn-secondary-bg: #fffdf9;
+  --soon-btn-secondary-border: #d8c7b2;
+  --soon-btn-secondary-text: #463425;
+
+  --soon-info-bg: #eef6ff;
+  --soon-info-border: #cfe3ff;
+  --soon-info-text: #1d4e89;
+  --soon-success-bg: #eefaf2;
+  --soon-success-border: #c9eed5;
+  --soon-success-text: #166534;
+  --soon-danger-bg: #fff7f6;
+  --soon-danger-border: #efc2bd;
+  --soon-danger-text: #9f1d1d;
+  --soon-pending-bg: #fff6df;
+  --soon-pending-text: #8a5b00;
+
+  --soon-nav-bg: #0f0f0f;
+  --soon-nav-text: #f5f5f5;
+  --soon-nav-muted: #888888;
+  --soon-nav-border: rgba(255,255,255,0.08);
+  --soon-tag-accent: #7c3aed;
+
   --soon-radius: 8px;
   --soon-radius-lg: 12px;
+  --soon-radius-pill: 999px;
+  --soon-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --soon-purple: var(--soon-tag-accent);
+  --soon-purple-light: #a78bfa;
+  --soon-purple-dim: rgba(124,58,237,0.15);
+  --soon-success: #34d399;
+  --soon-border: var(--soon-nav-border);
 }
 
+html,
 body {
+  margin: 0;
   background: var(--soon-bg);
   color: var(--soon-text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  margin: 0;
+  font-family: var(--soon-font);
 }
 
-/* Buttons */
+* {
+  box-sizing: border-box;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
 .soon-btn {
   padding: 8px 16px;
   border-radius: var(--soon-radius);
   font-size: 13px;
   cursor: pointer;
-  border: none;
-  font-family: system-ui;
+  border: 1px solid var(--soon-btn-secondary-border);
+  font-family: var(--soon-font);
 }
-.soon-btn-primary {
-  background: var(--soon-purple);
-  color: #fff;
-}
-.soon-btn-primary:hover { background: var(--accent-hover); }
-.soon-btn-secondary {
-  background: transparent;
-  color: var(--soon-text);
-  border: 0.5px solid rgba(255,255,255,0.15);
-}
-.soon-btn-secondary:hover { background: var(--soon-surface2); }
 
-/* Inputs */
+.soon-btn-primary {
+  background: var(--soon-btn-primary-bg);
+  border-color: var(--soon-btn-primary-border);
+  color: var(--soon-btn-primary-text);
+}
+
+.soon-btn-secondary {
+  background: var(--soon-btn-secondary-bg);
+  color: var(--soon-btn-secondary-text);
+  border-color: var(--soon-btn-secondary-border);
+}
+
 .soon-input {
-  background: var(--soon-surface2);
-  border: 0.5px solid var(--soon-border);
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--soon-input-bg);
+  border: 1px solid var(--soon-input-border);
   border-radius: var(--soon-radius);
   padding: 8px 12px;
   font-size: 13px;
   color: var(--soon-text);
   outline: none;
-  width: 100%;
-  box-sizing: border-box;
 }
-.soon-input:focus { border-color: var(--soon-purple); }
 
-/* Cards */
+.soon-input:focus {
+  border-color: var(--soon-input-focus);
+  box-shadow: 0 0 0 3px var(--soon-input-focus-ring);
+}
+
 .soon-card {
-  background: var(--soon-surface);
-  border: 0.5px solid var(--soon-border);
-  border-radius: var(--soon-radius-lg);
+  background: var(--soon-card-bg);
+  border: 1px solid var(--soon-card-border);
+  border-radius: var(--soon-radius);
+  box-shadow: var(--soon-card-shadow);
   padding: 20px;
 }
 
-/* Status badges */
 .soon-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--soon-radius-pill);
+  background: var(--soon-badge-bg);
+  color: var(--soon-badge-text);
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: 4px;
-}
-.soon-badge-purple {
-  background: var(--soon-purple-dim);
-  color: var(--soon-purple-light);
-  border: 0.5px solid rgba(124,58,237,0.3);
-}
-.soon-badge-success {
-  background: rgba(16,185,129,0.15);
-  color: #34d399;
 }
 
-/* Page header */
+.soon-badge-success {
+  background: var(--soon-success-bg);
+  color: var(--soon-success-text);
+}
+
 .soon-page-header {
   padding: 20px 24px;
-  border-bottom: 0.5px solid var(--soon-border);
+  border-bottom: 1px solid var(--soon-card-border);
   font-size: 16px;
-  font-weight: 600;
-  color: var(--soon-purple-light);
+  font-weight: 700;
+  color: var(--soon-accent);
 }
 
 body.embedded .soon-hide-embedded {

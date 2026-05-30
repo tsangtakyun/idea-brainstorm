@@ -142,7 +142,7 @@ export default function Home() {
   const [country, setCountry] = useState('');
   const [activeNav, setActiveNav] = useState<'home' | 'work' | 'board' | 'analysis'>('home');
   const detectedPlatform = inferPlatformFromUrl(url);
-  const homeRef = useRef<HTMLElement | null>(null);
+  const homeRef = useRef<HTMLDivElement | null>(null);
   const workRef = useRef<HTMLElement | null>(null);
   const boardRef = useRef<HTMLElement | null>(null);
   const analysisRef = useRef<HTMLElement | null>(null);
@@ -388,7 +388,7 @@ export default function Home() {
       if (data.placeAddress && !placeAddress) setPlaceAddress(data.placeAddress);
       if (data.desc) {
         const tagSummary = Array.isArray(data.tags) && data.tags.length > 0
-          ? `\n\nAI tags：${data.tags.join(' / ')}`
+          ? `\n\nAI 標籤：${data.tags.join(' / ')}`
           : '';
         setDesc(prev => prev?.trim() ? prev : `${data.desc}${tagSummary}`);
       }
@@ -417,7 +417,7 @@ export default function Home() {
         body: JSON.stringify(idea),
       })
       const payload = await res.json()
-      if (!res.ok) throw new Error(payload.error || 'Save failed')
+      if (!res.ok) throw new Error(payload.error || '儲存失敗')
       return payload.idea
     }
 
@@ -494,21 +494,21 @@ export default function Home() {
     setStatusSteps([
       { label: '讀取內容', state: 'active' },
       { label: 'AI 分析主題', state: '' },
-      { label: '計算爆款評分', state: '' },
+      { label: '計算熱度參考', state: '' },
       { label: '儲存', state: '' }
     ]);
     try {
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'active' },
-        { label: '計算爆款評分', state: '' },
+        { label: '計算熱度參考', state: '' },
         { label: '儲存', state: '' }
       ]);
       const analysis = await callClaude(url, desc, image, +views || 0, +likes || 0, +shares || 0, country);
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
-        { label: '計算爆款評分', state: 'done' },
+        { label: '計算熱度參考', state: 'done' },
         { label: '儲存中...', state: 'active' }
       ]);
       let finalLat = placeLat
@@ -548,7 +548,7 @@ export default function Home() {
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
-        { label: '計算爆款評分', state: 'done' },
+        { label: '計算熱度參考', state: 'done' },
         { label: '儲存完成', state: 'done' }
       ]);
       showNotif('想法已儲存 ✓', 'success');
@@ -662,10 +662,10 @@ export default function Home() {
   }
 
   const typeBadge: Record<string, string> = { reel: 'badge-reel', blog: 'badge-blog', social: 'badge-social' };
-  const typeLabel: Record<string, string> = { reel: 'IG Reel', blog: 'Blog', social: 'Social' };
+  const typeLabel: Record<string, string> = { reel: 'IG 短片', blog: '文章', social: '社交貼文' };
   const filterLabel = filter === 'all' ? '所有想法' :
     filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' 的想法' :
-    { reel: 'IG Reel', blog: '文章 / Blog', social: 'Social Post' }[filter] || filter;
+    { reel: 'IG 短片', blog: '文章', social: '社交貼文' }[filter] || filter;
 
   function jumpTo(section: 'home' | 'work' | 'board' | 'analysis') {
     setActiveNav(section);
@@ -679,7 +679,7 @@ export default function Home() {
 
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>{CSS}</style>
 
       <div className="workspace-shell">
@@ -709,7 +709,7 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">01</span>
-            <span className="step-label">URL / Link</span>
+            <span className="step-label">參考連結</span>
             <div style={{ position: 'relative' }}>
               <input className="field" type="url" placeholder="例：https://www.instagram.com/reel/…" value={url} onChange={e => setUrl(e.target.value)} style={{ paddingRight: 112 }} />
               <button
@@ -737,7 +737,7 @@ export default function Home() {
               </div>
             )}
             <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
-              平台如果限制 metadata，請直接上載截圖或封面。AI 會根據連結與截圖預填資料，但仍建議人手覆核。
+              平台如果限制資料讀取，請直接上載截圖或封面。AI 會根據連結與截圖預填資料，但仍建議人手覆核。
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="field" placeholder="店鋪 / 品牌名稱" value={placeName} onChange={e => setPlaceName(e.target.value)} style={{ flex: 2 }} />
@@ -777,7 +777,7 @@ export default function Home() {
               onChange={e => setCustomTitle(e.target.value)}
             />
             <div style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
-              有填會優先用你嘅題目；冇填就由 AI 幫你生成。
+              有填會優先使用你的題目；沒有填寫就由 AI 生成。
             </div>
           </div>
 
@@ -788,15 +788,15 @@ export default function Home() {
             <span className="step-label">數據</span>
             <div className="stats-row">
               <div className="stat-block">
-                <span className="stat-label">Views</span>
+                <span className="stat-label">觀看</span>
                 <input className="field" type="number" min="0" placeholder="例：1200000" value={views} onChange={e => setViews(e.target.value)} />
               </div>
               <div className="stat-block">
-                <span className="stat-label">Likes</span>
+                <span className="stat-label">讚好</span>
                 <input className="field" type="number" min="0" placeholder="例：36000" value={likes} onChange={e => setLikes(e.target.value)} />
               </div>
               <div className="stat-block">
-                <span className="stat-label">Save</span>
+                <span className="stat-label">收藏</span>
                 <input className="field" type="number" min="0" placeholder="例：48000" value={shares} onChange={e => setShares(e.target.value)} />
               </div>
             </div>
@@ -834,7 +834,7 @@ export default function Home() {
             <div className="chips">
               {['reel', 'blog', 'social'].map(t => (
                 <button key={t} className={`chip${selectedType === t ? ' sel' : ''}`} onClick={() => setSelectedType(t)}>
-                  {t === 'reel' ? 'IG Reel' : t === 'blog' ? '文章 / Blog' : 'Social Post'}
+                  {t === 'reel' ? 'IG 短片' : t === 'blog' ? '文章' : '社交貼文'}
                 </button>
               ))}
             </div>
@@ -863,10 +863,10 @@ export default function Home() {
         </aside>
 
         <main className="main-panel">
-          <div className="workspace-header">
+          <div className="workspace-header" ref={homeRef}>
             <div>
               <div className="brand-label">SOON 創意營運</div>
-              <h1 className="page-title">IG reel 題材靈感工作台</h1>
+              <h1 className="page-title">IG 短片題材靈感工作台</h1>
               <div className="header-meta">{ideasLoading ? '正在同步資料...' : `目前已整理 ${ideas.length} 個靈感素材`}</div>
             </div>
             <div className="workspace-actions">
@@ -895,28 +895,14 @@ export default function Home() {
 
           {activeTab === 'my-ideas' ? (
             <>
-              <section className="hero-row" ref={homeRef}>
-                <img
-                  src="/hero-banner.jpg"
-                  alt="每個人都需要建立自己的題材庫"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    borderRadius: '12px',
-                    display: 'block',
-                    marginBottom: '24px',
-                  }}
-                />
-              </section>
-
               <section className="board-toolbar" ref={boardRef}>
                 <div className="gallery-title">{filterLabel} · {filtered.length} 個</div>
                 <div className="controls">
                   <input className="search-field" placeholder="搜尋題目、主題、標籤…" value={search} onChange={e => setSearch(e.target.value)} />
                   <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
                     <option value="date">最新優先</option>
-                    <option value="viral">爆款評分</option>
-                    <option value="views">Views 最多</option>
+                    <option value="viral">熱度參考</option>
+                    <option value="views">觀看最多</option>
                   </select>
                 </div>
               </section>
@@ -933,7 +919,7 @@ export default function Home() {
               <div className="filter-strip">
                 {['all', 'reel', 'blog', 'social'].map(f => (
                   <button key={f} className={`filter-btn${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
-                    {f === 'all' ? '全部' : f === 'reel' ? 'IG Reel' : f === 'blog' ? '文章 / Blog' : 'Social'}
+                    {f === 'all' ? '全部' : f === 'reel' ? 'IG 短片' : f === 'blog' ? '文章' : '社交貼文'}
                   </button>
                 ))}
                 <span className="filter-divider" />
@@ -959,7 +945,7 @@ export default function Home() {
                 <div className="list-wrap">
                   <div className="list-head">
                     <div>題材</div>
-                    <div>爆款指數</div>
+                    <div>熱度參考</div>
                     <div>操作</div>
                   </div>
                   <div className="idea-list">
@@ -1031,7 +1017,7 @@ export default function Home() {
                             </div>
 
                             <div className="idea-actions">
-                              <button className="btn-script btn-script-meta" type="button" onClick={() => handlePushToScript(idea)}>推上劇本生成</button>
+                              <button className="btn-script btn-script-meta" type="button" onClick={() => handlePushToScript(idea)}>推上劇本生產線</button>
                               <button onClick={()=>setDetailIdeaId(idea.id)} className="row-action-btn">
                                 詳情
                               </button>
@@ -1053,8 +1039,8 @@ export default function Home() {
             </>
           ) : (
             <section className="explore-placeholder">
-              <p className="explore-title">發掘熱門題材</p>
-              <p className="explore-copy">輸入關鍵字，AI 幫你搵 IG / YouTube 最新爆款題材方向</p>
+              <p className="explore-title">發掘題材方向</p>
+              <p className="explore-copy">輸入關鍵字，AI 會整理 IG / YouTube 的近期題材方向。</p>
               <div className="explore-search">
                 <input
                   className="explore-input"
@@ -1075,7 +1061,7 @@ export default function Home() {
               {exploreLoading && (
                 <div className="explore-loading">
                   <p>🤖 AI 分析題材方向中…</p>
-                  <p>📺 搜尋 YouTube 爆款例子…</p>
+                  <p>📺 搜尋 YouTube 參考例子…</p>
                 </div>
               )}
               {exploreError && <p className="explore-error">{exploreError}</p>}
@@ -1182,15 +1168,15 @@ export default function Home() {
                 <div className="detail-metrics">
                   <div className="metric-box">
                     <div className="metric-value">{fmtNum(detailIdea.views || 0)}</div>
-                    <div className="metric-key">Views</div>
+                    <div className="metric-key">觀看</div>
                   </div>
                   <div className="metric-box">
                     <div className="metric-value">{fmtNum(detailIdea.likes || 0)}</div>
-                    <div className="metric-key">Likes</div>
+                    <div className="metric-key">讚好</div>
                   </div>
                   <div className="metric-box">
                     <div className="metric-value">{fmtNum(detailIdea.shares || 0)}</div>
-                    <div className="metric-key">Save</div>
+                    <div className="metric-key">收藏</div>
                   </div>
                 </div>
               </div>
@@ -1231,26 +1217,26 @@ export default function Home() {
 }
 
 const CSS = `
-:root{--bg-base:#0a0a0f;--bg-surface:#111118;--bg-card:#16161f;--bg-card-hover:#1c1c28;--border-subtle:#2a2a3a;--border-default:#3a3a50;--accent:#7c5cfc;--accent-hover:#6b4ef0;--text-primary:#f0f0f5;--text-secondary:#9090a8;--text-muted:#5a5a72;--bg:var(--bg-base);--surface:var(--bg-surface);--surface2:var(--bg-card);--surface3:var(--bg-card-hover);--surface4:var(--bg-surface);--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text-muted);--border:var(--border-subtle);--border2:var(--border-default);--tag-bg:var(--bg-card);--radius:8px;--radius-md:12px;--sans:'Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+:root{--bg-base:var(--soon-bg);--bg-surface:var(--soon-surface);--bg-card:var(--soon-card-bg);--bg-card-hover:#fffaf2;--border-subtle:var(--soon-card-border);--border-default:var(--soon-input-border);--accent:var(--soon-accent);--accent-hover:var(--soon-link);--text-primary:var(--soon-text);--text-secondary:var(--soon-text-secondary);--text-muted:var(--soon-text-muted);--bg:var(--bg-base);--surface:var(--bg-surface);--surface2:var(--bg-card);--surface3:var(--bg-card-hover);--surface4:var(--bg-surface);--text:var(--text-primary);--text2:var(--text-secondary);--text3:var(--text-muted);--border:var(--border-subtle);--border2:var(--border-default);--tag-bg:var(--soon-badge-bg);--radius:var(--soon-radius);--radius-md:var(--soon-radius-lg);--sans:var(--soon-font)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans);font-size:14px;font-weight:400;line-height:1.65;min-height:100vh}
-.workspace-shell{display:flex;flex-direction:column;min-height:100vh;background:var(--bg-base)}
-.sidebar{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(460px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;transform:translateX(100%);transition:transform .22s ease;box-shadow:-24px 0 60px rgba(0,0,0,.32)}
+body{background:var(--soon-bg-gradient);color:var(--text-primary);font-family:var(--sans);font-size:14px;font-weight:400;line-height:1.65;min-height:100vh}
+.workspace-shell{display:flex;flex-direction:column;min-height:100vh;background:var(--soon-bg-gradient)}
+.sidebar{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(460px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;transform:translateX(100%);transition:transform .22s ease;box-shadow:var(--soon-card-shadow)}
 .sidebar.open{transform:translateX(0)}
-.panel-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(0,0,0,.52);cursor:pointer}
+.panel-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(31,35,40,.22);cursor:pointer}
 .sidebar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
 .workspace-chip-title{font-size:18px;font-weight:600;color:var(--text-primary)}
 .panel-close{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:var(--radius);padding:7px 10px;font-family:var(--sans);font-size:12px;cursor:pointer}
 .panel-close:hover{background:var(--bg-card-hover);color:var(--text-primary)}
-.detail-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(0,0,0,.48);cursor:pointer}
-.detail-panel{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(360px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;box-shadow:-24px 0 60px rgba(0,0,0,.32);animation:slideDetail .22s ease}
+.detail-backdrop{position:fixed;inset:0;z-index:1000;border:0;background:rgba(31,35,40,.20);cursor:pointer}
+.detail-panel{position:fixed;top:0;right:0;bottom:0;z-index:1001;width:min(360px,100vw);background:var(--bg-card);border-left:1px solid var(--border-subtle);padding:22px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;box-shadow:var(--soon-card-shadow);animation:slideDetail .22s ease}
 @keyframes slideDetail{from{transform:translateX(100%)}to{transform:translateX(0)}}
 .detail-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
 .detail-section{display:grid;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
 .detail-section:last-child{border-bottom:0;padding-bottom:0}
 .detail-metrics{display:grid;grid-template-columns:1fr;gap:8px}
 .detail-link-group{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
-.ai-detail-btn{width:100%;padding:10px;margin-top:12px;background:var(--accent);color:white;border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.ai-detail-btn{width:100%;padding:10px;margin-top:12px;background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)}
 .ai-detail-btn.generated{background:transparent;color:var(--text-secondary);border:1px solid var(--border-subtle)}
 .ai-detail-btn:disabled{cursor:not-allowed;opacity:.7}
 .ai-detail-box{margin-top:16px;padding:14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border-subtle);font-size:13px;color:var(--text-primary);line-height:1.8;white-space:pre-wrap}
@@ -1260,11 +1246,11 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .explore-search{margin:24px auto 0;display:flex;gap:8px;max-width:480px}
 .explore-input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary);font-family:var(--sans);font-size:13px;outline:none}
 .explore-input:focus{border-color:var(--accent)}
-.explore-button{padding:10px 20px;background:var(--accent);color:white;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px}
+.explore-button{padding:10px 20px;background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px}
 .explore-button:disabled{opacity:.65;cursor:not-allowed}
 .explore-note{font-size:12px;color:var(--text-muted);margin-top:16px}
 .explore-loading{margin-top:24px;color:var(--text-secondary);font-size:14px;line-height:1.9}
-.explore-error{margin-top:20px;color:#ff9f8f;font-size:13px}
+.explore-error{margin-top:20px;color:var(--soon-danger-text);font-size:13px}
 .explore-results{max-width:980px;margin:32px auto 0;text-align:left}
 .explore-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:20px;margin-bottom:16px}
 .explore-card-top{display:flex;justify-content:space-between;gap:18px}
@@ -1284,15 +1270,15 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .youtube-title{font-size:11px;line-height:1.35;padding:6px 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .youtube-channel{font-size:10px;color:var(--text-muted);padding:0 8px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .explore-empty-video{color:var(--text-muted);font-size:12px}
-.explore-add-btn{width:100%;margin-top:16px;background:var(--accent);color:white;border:0;border-radius:8px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer}
-.explore-add-btn:hover{background:var(--accent-hover)}
+.explore-add-btn{width:100%;margin-top:16px;background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border:0;border-radius:8px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer}
+.explore-add-btn:hover{background:var(--soon-link)}
 .workspace-chip{display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border-subtle);font-size:13px;font-weight:500;color:var(--text-primary);cursor:pointer}
 .workspace-chip-logo{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:var(--radius);background:var(--bg-card-hover);border:1px solid var(--border-subtle);font-size:10px;font-weight:600;letter-spacing:0.12em;line-height:1;color:var(--accent)}
 .workspace-sub{margin-top:10px;font-size:12px;color:var(--text3)}
 .sidebar-nav{display:none}
 .sidebar-nav-item{padding:10px 14px;border:none;border-left:2px solid transparent;border-radius:0;background:transparent;color:var(--text-secondary);text-align:left;font-family:var(--sans);font-size:13px;font-weight:400;cursor:pointer}
 .sidebar-nav-item:hover{background:var(--bg-card);color:var(--text-primary)}
-.sidebar-nav-item.active{background:var(--bg-card);color:#a79cff;border-left-color:var(--accent)}
+.sidebar-nav-item.active{background:var(--bg-card);color:var(--soon-link);border-left-color:var(--accent)}
 .sidebar-section-title{display:none}
 .brand-label{font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3)}
 .page-title{font-size:36px;font-weight:600;line-height:1.05;color:var(--text-primary);letter-spacing:0}
@@ -1301,16 +1287,16 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--sans)
 .workspace-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
 .workspace-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .ghost-top-btn,.primary-top-btn{border-radius:8px;padding:8px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s,color 0.15s,border-color 0.15s}
-.ghost-top-btn{background:transparent;border:1px solid #0ea5e9;color:#0ea5e9}
-.ghost-top-btn:hover{background:#0ea5e9;color:white}
-.primary-top-btn{border:1px solid #10b981;background:#10b981;color:white;box-shadow:none}
-.primary-top-btn:hover{background:#059669;border-color:#059669;color:white}
+.ghost-top-btn{background:transparent;border:1px solid var(--soon-btn-secondary-border);color:var(--soon-btn-secondary-text)}
+.ghost-top-btn:hover{background:var(--soon-btn-secondary-bg);color:var(--soon-btn-secondary-text)}
+.primary-top-btn{border:1px solid var(--soon-btn-primary-border);background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);box-shadow:none}
+.primary-top-btn:hover{background:var(--soon-link);border-color:var(--soon-link);color:var(--soon-btn-primary-text)}
 .tab-action-btn{border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);border-radius:8px;padding:8px 16px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s,transform 0.15s,color 0.15s,border-color 0.15s}
 .tab-action-btn:hover,.ghost-top-btn:hover,.primary-top-btn:hover{transform:translateY(-1px)}
-.tab-action-my{border-color:#7c5cfc;color:#7c5cfc}
-.tab-action-my.active{background:#7c5cfc;color:white;border-color:#7c5cfc}
-.tab-action-explore{border-color:#f59e0b;color:#f59e0b}
-.tab-action-explore.active{background:#f59e0b;color:white;border-color:#f59e0b}
+.tab-action-my{border-color:var(--soon-btn-secondary-border);color:var(--soon-btn-secondary-text)}
+.tab-action-my.active{background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border-color:var(--soon-btn-primary-border)}
+.tab-action-explore{border-color:var(--soon-btn-secondary-border);color:var(--soon-btn-secondary-text)}
+.tab-action-explore.active{background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border-color:var(--soon-btn-primary-border)}
 .hero-row{display:grid;grid-template-columns:1fr;gap:18px}
 .board-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px}
 .gallery-title{font-size:18px;color:var(--text-primary);font-weight:600}
@@ -1344,17 +1330,17 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:7px 14px;border-radius:999px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s}
 .chip:hover{background:var(--bg-card);color:var(--text-primary)}
-.chip.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip.sel{background:var(--accent);color:var(--soon-btn-primary-text);border-color:var(--accent)}
 .divider{display:none}
 .ai-status{padding:14px 16px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);font-size:12px;color:var(--text-secondary);line-height:1.9}
 .ai-status .step{display:flex;align-items:center;gap:8px}
 .step-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border2);transition:background 0.3s}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.step.done .step-dot{background:#34d399}
+.step.done .step-dot{background:var(--soon-success-text)}
 .step.active .step-dot{background:var(--text);animation:pulse 1s ease-in-out infinite}
 .step.done{color:var(--text3)}.step.active{color:var(--text);font-weight:400}
-.btn-submit{width:100%;padding:13px 20px;background:var(--accent);border:none;border-radius:var(--radius);color:white;font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;cursor:pointer;transition:background 0.15s,transform 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:none}
-.btn-submit:hover{background:var(--accent-hover);transform:scale(0.98)}
+.btn-submit{width:100%;padding:13px 20px;background:var(--soon-btn-primary-bg);border:none;border-radius:var(--radius);color:var(--soon-btn-primary-text);font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;cursor:pointer;transition:background 0.15s,transform 0.15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:none}
+.btn-submit:hover{background:var(--soon-link);transform:scale(0.98)}
 .spinner{width:14px;height:14px;border:1.5px solid rgba(255,255,255,0.25);border-top-color:rgba(255,255,255,0.9);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .filter-btn{padding:7px 14px;border-radius:999px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0.05em;cursor:pointer;transition:all 0.15s;text-transform:uppercase}
@@ -1391,8 +1377,8 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .metric-key{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
 .idea-meta{display:flex;flex-direction:column;gap:8px}
 .idea-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-.idea-actions .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:#7c5cfc;border:1px solid #7c5cfc;color:#fff;border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
-.idea-actions .row-action-btn:hover{background:#6b4ef0;border-color:#6b4ef0;color:#fff}
+.idea-actions .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:var(--soon-btn-primary-bg);border:1px solid var(--soon-btn-primary-border);color:var(--soon-btn-primary-text);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
+.idea-actions .row-action-btn:hover{background:var(--soon-link);border-color:var(--soon-link);color:var(--soon-btn-primary-text)}
 .title-edit-actions .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:transparent;border:1px solid var(--border-default);color:var(--text-secondary);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
 .title-edit-actions .row-action-btn:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .row-delete{padding:7px 9px;border:1px solid rgba(255,255,255,0.14)}
@@ -1405,7 +1391,7 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .empty-title{font-size:22px;font-style:italic;color:var(--text2);margin-bottom:8px}
 .empty-sub{font-size:13px}
 .badge{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid currentColor;opacity:0.9}
-.badge-reel{color:#9a8cff}.badge-blog{color:#61d3a4}.badge-social{color:#ffae63}.badge-country{color:var(--text-secondary);border-color:var(--border-subtle);background:var(--bg-card)}
+.badge-reel{color:var(--soon-link)}.badge-blog{color:var(--soon-success-text)}.badge-social{color:var(--soon-pending-text)}.badge-country{color:var(--text-secondary);border-color:var(--border-subtle);background:var(--bg-card)}
 .card-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:2px;transition:color 0.15s;flex-shrink:0}
 .card-delete:hover{color:var(--text)}
 .viral-row{display:flex;align-items:center;gap:10px}
@@ -1418,14 +1404,14 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .card-source{font-size:10px;color:var(--text3);word-break:break-all;text-decoration:none;display:block}
 .card-source:hover{color:var(--text2)}
 .card-date{font-size:10px;color:var(--text3);font-weight:400}
-.btn-script{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid #f59e0b;border-radius:var(--radius);background:#f59e0b;font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:#fff;text-decoration:none;transition:all 0.15s;width:max-content;box-shadow:none}
-.btn-script:hover{background:#d97706;border-color:#d97706;transform:scale(0.98)}
+.btn-script{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid var(--soon-btn-secondary-border);border-radius:var(--radius);background:var(--soon-btn-secondary-bg);font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--soon-btn-secondary-text);text-decoration:none;transition:all 0.15s;width:max-content;box-shadow:none}
+.btn-script:hover{background:var(--soon-badge-bg);border-color:var(--soon-input-hover);transform:scale(0.98)}
 .btn-script-meta{white-space:nowrap}
 .hook-quote{font-size:13px;color:var(--text-secondary);padding:10px 14px;border-left:2px solid var(--accent);background:var(--bg-card);border-radius:0 var(--radius) var(--radius) 0;line-height:1.5}
-.notif{position:fixed;bottom:28px;right:28px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px 20px;font-size:12px;color:var(--text-primary);box-shadow:0 12px 28px rgba(0,0,0,0.24);z-index:999;transform:translateY(60px);opacity:0;transition:all 0.3s cubic-bezier(.16,1,.3,1);pointer-events:none;font-weight:400}
+.notif{position:fixed;bottom:28px;right:28px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px 20px;font-size:12px;color:var(--text-primary);box-shadow:0 12px 28px rgba(53,38,22,.11);z-index:999;transform:translateY(60px);opacity:0;transition:all 0.3s cubic-bezier(.16,1,.3,1);pointer-events:none;font-weight:400}
 .notif.show{transform:translateY(0);opacity:1}
-.notif.success{border-color:rgba(90,138,106,0.4);color:#7fdfaa}
-.notif.error{border-color:rgba(180,80,60,0.3);color:#ff9f8f}
+.notif.success{border-color:var(--soon-success-border);color:var(--soon-success-text)}
+.notif.error{border-color:var(--soon-danger-border);color:var(--soon-danger-text)}
 @media(max-width:1200px){.list-head{display:none}.idea-row{grid-template-columns:1fr;gap:12px}.idea-actions{justify-content:flex-start}}
 @media(max-width:900px){.main-panel{padding:18px}}
 @media(max-width:640px){.workspace-actions{width:100%}.ghost-top-btn,.primary-top-btn{flex:1}.search-field{width:100%}}
