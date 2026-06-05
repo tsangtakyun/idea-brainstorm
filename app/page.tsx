@@ -76,7 +76,7 @@ Analyse the given content reference and return ONLY valid JSON (no markdown, no 
   "scriptHook": "one punchy opening line in Traditional Chinese"
 }`;
 
-async function callClaude(url: string, desc: string, image: string | null, views: number, likes: number, shares: number, country: string) {
+async function callClaude(url: string, desc: string, image: string | null, country: string) {
   const countryName = COUNTRIES[country] || country;
   let userContent: any;
   if (image) {
@@ -84,10 +84,10 @@ async function callClaude(url: string, desc: string, image: string | null, views
       : image.startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg';
     userContent = [
       { type: 'image', source: { type: 'base64', media_type: mediaType, data: image.split(',')[1] } },
-      { type: 'text', text: `URL: ${url || '(none)'}\nDesc: ${desc || '(none)'}\nCountry: ${countryName}\nViews: ${views}\nLikes: ${likes}\nShares: ${shares}\nReturn JSON only.` }
+      { type: 'text', text: `URL: ${url || '(none)'}\nDesc: ${desc || '(none)'}\nCountry: ${countryName}\nReturn JSON only.` }
     ];
   } else {
-    userContent = `URL: ${url}\nDesc: ${desc || '(none)'}\nCountry: ${countryName}\nViews: ${views}\nLikes: ${likes}\nShares: ${shares}\nReturn JSON only.`;
+    userContent = `URL: ${url}\nDesc: ${desc || '(none)'}\nCountry: ${countryName}\nReturn JSON only.`;
   }
   const res = await fetch('/api/analyse', {
     method: 'POST',
@@ -98,7 +98,7 @@ async function callClaude(url: string, desc: string, image: string | null, views
   const d = await res.json();
   const text = d.content.find((b: any) => b.type === 'text')?.text || '';
   const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-  return { ...parsed, viralScore: computeViralScore(views, likes, shares, parsed.aiViralBase || 50) };
+  return { ...parsed, viralScore: parsed.aiViralBase || 50 };
 }
 
 export default function Home() {
@@ -121,7 +121,6 @@ export default function Home() {
   const [placeAddress, setPlaceAddress] = useState('');
   const [placeLat, setPlaceLat] = useState<number | null>(null);
   const [placeLng, setPlaceLng] = useState<number | null>(null);
-  const [showWorldMap, setShowWorldMap] = useState(false);
   const [inputPanelOpen, setInputPanelOpen] = useState(false);
   const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null);
   const [soonAccessToken, setSoonAccessToken] = useState('');
@@ -136,9 +135,6 @@ export default function Home() {
   const [url, setUrl] = useState('');
   const [customTitle, setCustomTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [views, setViews] = useState('');
-  const [likes, setLikes] = useState('');
-  const [shares, setShares] = useState('');
   const [country, setCountry] = useState('');
   const [activeNav, setActiveNav] = useState<'home' | 'work' | 'board' | 'analysis'>('home');
   const detectedPlatform = inferPlatformFromUrl(url);
@@ -150,7 +146,7 @@ export default function Home() {
   function normalizeIdeas(data: any[]) {
     return data.map((d: any) => ({
       id: d.id,
-      type: d.type,
+      type: d.type ?? 'reel',
       url: d.url,
       thumb: d.thumb,
       views: d.views,
@@ -168,6 +164,12 @@ export default function Home() {
       lat: d.lat ?? null,
       lng: d.lng ?? null,
       notes: d.notes ?? null,
+      sourceUrl: d.source_url ?? d.url ?? '',
+      videoUrl: d.video_url ?? '',
+      platform: d.platform ?? '',
+      categories: Array.isArray(d.categories) ? d.categories : [],
+      placeName: d.place_name ?? '',
+      placeAddress: d.place_address ?? '',
     }))
   }
 
@@ -444,31 +446,88 @@ export default function Home() {
       lat: idea.lat ?? null,
       lng: idea.lng ?? null,
       notes: idea.notes ?? null,
+      source_url: idea.sourceUrl ?? idea.url ?? null,
+      platform: idea.platform ?? inferPlatformFromUrl(idea.url || ''),
+      categories: Array.isArray(idea.categories) ? idea.categories : [],
+      video_url: idea.videoUrl ?? null,
+      place_name: idea.placeName ?? null,
+      place_address: idea.placeAddress ?? null,
     }).select().single()
     if (error) throw error
     return data
   }
 
   async function deleteIdeaFromSupabase(id: any) {
+    if (soonAccessToken) {
+      const res = await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${soonAccessToken}` },
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload.error || '刪除失敗')
+      return
+    }
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not logged in')
-    await supabase.from('ideas').delete().eq('id', id).eq('user_id', user.id)
+    const { error } = await supabase.from('ideas').delete().eq('id', id).eq('user_id', user.id)
+    if (error) throw error
   }
 
   async function saveNote(id: any, note: string) {
     setSavingNote(id)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not logged in')
-    await supabase.from('ideas').update({ notes: note }).eq('id', id).eq('user_id', user.id)
-    setSavingNote(null)
+    try {
+      if (soonAccessToken) {
+        const res = await fetch('/api/ideas', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${soonAccessToken}`,
+          },
+          body: JSON.stringify({ id, notes: note }),
+        })
+        const payload = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(payload.error || '儲存筆記失敗')
+      } else {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Not logged in')
+        const { error } = await supabase.from('ideas').update({ notes: note }).eq('id', id).eq('user_id', user.id)
+        if (error) throw error
+      }
+      setIdeas(prev => prev.map(idea => idea.id === id ? { ...idea, notes: note } : idea))
+    } catch (error) {
+      showNotif(error instanceof Error ? error.message : '儲存筆記失敗', 'error')
+    } finally {
+      setSavingNote(null)
+    }
   }
 
   async function saveIdeaTitle(id: string, title: string) {
     const nextTitle = title.trim()
     if (!nextTitle) {
       showNotif('題目不可留空', 'error')
+      return
+    }
+    if (soonAccessToken) {
+      try {
+        const res = await fetch('/api/ideas', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${soonAccessToken}`,
+          },
+          body: JSON.stringify({ id, title: nextTitle }),
+        })
+        const payload = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(payload.error || '更新標題失敗')
+        setIdeas(prev => prev.map(idea => idea.id === id ? { ...idea, title: nextTitle } : idea))
+        setEditingTitleId(null)
+        showNotif('標題已儲存', 'success')
+      } catch (error) {
+        showNotif(error instanceof Error ? error.message : '更新標題失敗，請重試', 'error')
+      }
       return
     }
     const supabase = createClient()
@@ -494,21 +553,21 @@ export default function Home() {
     setStatusSteps([
       { label: '讀取內容', state: 'active' },
       { label: 'AI 分析主題', state: '' },
-      { label: '計算熱度參考', state: '' },
+      { label: '整理題材資料', state: '' },
       { label: '儲存', state: '' }
     ]);
     try {
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'active' },
-        { label: '計算熱度參考', state: '' },
+        { label: '整理題材資料', state: '' },
         { label: '儲存', state: '' }
       ]);
-      const analysis = await callClaude(url, desc, image, +views || 0, +likes || 0, +shares || 0, country);
+      const analysis = await callClaude(url, desc, image, country);
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
-        { label: '計算熱度參考', state: 'done' },
+        { label: '整理題材資料', state: 'done' },
         { label: '儲存中...', state: 'active' }
       ]);
       let finalLat = placeLat
@@ -528,19 +587,24 @@ export default function Home() {
         type: selectedType,
         url,
         thumb: image,
-        views: +views || 0,
-        likes: +likes || 0,
-        shares: +shares || 0,
+        views: 0,
+        likes: 0,
+        shares: 0,
         country: country || 'OTHER',
         date: new Date().toISOString(),
         lat: finalLat,
         lng: finalLng,
         notes: desc || null,
+        sourceUrl: url || null,
+        platform: detectedPlatform || 'instagram',
+        categories: country ? [COUNTRIES[country]?.split(' ').slice(1).join(' ') || country] : [],
+        placeName,
+        placeAddress,
         ...analysis,
         title: customTitle.trim() || analysis.title,
       };
       const saved = await saveIdeaToSupabase(ideaData)
-      setIdeas(prev => [{ ...ideaData, id: saved.id }, ...prev]);
+      setIdeas(prev => [{ ...ideaData, id: saved.id, sourceUrl: saved.source_url ?? ideaData.sourceUrl, categories: saved.categories ?? ideaData.categories }, ...prev]);
       setActiveTab('my-ideas');
       setFilter('all');
       setSearch('');
@@ -548,11 +612,11 @@ export default function Home() {
       setStatusSteps([
         { label: '讀取內容', state: 'done' },
         { label: 'AI 分析主題', state: 'done' },
-        { label: '計算熱度參考', state: 'done' },
+        { label: '整理題材資料', state: 'done' },
         { label: '儲存完成', state: 'done' }
       ]);
       showNotif('想法已儲存 ✓', 'success');
-      setUrl(''); setCustomTitle(''); setDesc(''); setViews(''); setLikes(''); setShares(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
+      setUrl(''); setCustomTitle(''); setDesc(''); setCountry(''); setImage(null); setPlaceName(''); setPlaceAddress(''); setPlaceLat(null); setPlaceLng(null);
       setTimeout(() => setStatusSteps(null), 2500);
     } catch (err) {
       console.error(err);
@@ -611,8 +675,32 @@ export default function Home() {
     }, '*');
   };
 
+  const buildColdTellSource = (idea: any) => [
+    idea.title ? `標題：${idea.title}` : '',
+    idea.topic ? `主題：${idea.topic}` : '',
+    idea.summary ? `摘要：${idea.summary}` : '',
+    idea.notes ? `筆記：${idea.notes}` : '',
+    idea.scriptHook ? `Hook：${idea.scriptHook}` : '',
+    idea.sourceUrl || idea.url || idea.videoUrl ? `來源：${idea.sourceUrl || idea.url || idea.videoUrl}` : '',
+    idea.placeName ? `地點：${idea.placeName}` : '',
+    idea.placeAddress || idea.address ? `地址：${idea.placeAddress || idea.address}` : '',
+  ].filter(Boolean).join('\n')
+
+  const handlePushToColdTell = (idea: any) => {
+    window.parent.postMessage({
+      type: 'SOON_NAVIGATE_TOOL',
+      pipeline: 'ig',
+      tool: 'script',
+      target: 'cold_tell',
+      topic: idea.title || idea.topic || '',
+      source: buildColdTellSource(idea),
+      location: idea.placeAddress || idea.address || '',
+    }, '*');
+  };
+
   const filtered = ideas
     .filter(i => {
+      if (filter.startsWith('board-')) return (i.categories || []).includes(filter.replace('board-', ''));
       if (filter.startsWith('country-')) return i.country === filter.replace('country-', '');
       if (filter !== 'all') return i.type === filter;
       return true;
@@ -623,15 +711,14 @@ export default function Home() {
       return hay.includes(search.toLowerCase());
     })
     .sort((a, b) =>
-      sort === 'viral' ? (b.viralScore || 0) - (a.viralScore || 0) :
-      sort === 'views' ? (b.views || 0) - (a.views || 0) :
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
+  const ideaBoards = Array.from(new Set(ideas.flatMap(i => Array.isArray(i.categories) ? i.categories : []).filter(Boolean))).slice(0, 8);
   const mappedCountries = Array.from(new Set(filtered.map(i => i.country).filter(Boolean))).slice(0, 6);
   const detailIdea = detailIdeaId ? ideas.find(i => i.id === detailIdeaId) : null;
   const detailNoteContent = detailIdea ? (notes[detailIdea.id] !== undefined ? notes[detailIdea.id] : (detailIdea.notes || detailIdea.summary || '')) : '';
-  const pendingFields = [url, desc, country, views, likes, shares].filter(Boolean).length;
+  const pendingFields = [url, desc, country].filter(Boolean).length;
 
   useEffect(() => {
     setAiDetail('');
@@ -653,19 +740,20 @@ export default function Home() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '未能取得資料，請重試。');
+      if (!res.ok) throw new Error(data.error || 'Unable to load detail');
       setAiDetail(data.detail || '');
     } catch {
-      setAiDetail('未能取得資料，請重試。');
+      setAiDetail('Unable to load detail');
     }
     setAiDetailLoading(false);
   }
 
   const typeBadge: Record<string, string> = { reel: 'badge-reel', blog: 'badge-blog', social: 'badge-social' };
-  const typeLabel: Record<string, string> = { reel: 'IG 短片', blog: '文章', social: '社交貼文' };
-  const filterLabel = filter === 'all' ? '所有想法' :
-    filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' 的想法' :
-    { reel: 'IG 短片', blog: '文章', social: '社交貼文' }[filter] || filter;
+  const typeLabel: Record<string, string> = { reel: 'IG Reel' };
+  const filterLabel = filter === 'all' ? 'All Ideas' :
+    filter.startsWith('board-') ? filter.replace('board-', '') + ' Board' :
+    filter.startsWith('country-') ? (COUNTRIES[filter.replace('country-', '')] || '') + ' Ideas' :
+    { reel: 'IG Reel' }[filter] || filter;
 
   function jumpTo(section: 'home' | 'work' | 'board' | 'analysis') {
     setActiveNav(section);
@@ -785,27 +873,6 @@ export default function Home() {
 
           <div className="step-block">
             <span className="step-num">03</span>
-            <span className="step-label">數據</span>
-            <div className="stats-row">
-              <div className="stat-block">
-                <span className="stat-label">觀看</span>
-                <input className="field" type="number" min="0" placeholder="例：1200000" value={views} onChange={e => setViews(e.target.value)} />
-              </div>
-              <div className="stat-block">
-                <span className="stat-label">讚好</span>
-                <input className="field" type="number" min="0" placeholder="例：36000" value={likes} onChange={e => setLikes(e.target.value)} />
-              </div>
-              <div className="stat-block">
-                <span className="stat-label">收藏</span>
-                <input className="field" type="number" min="0" placeholder="例：48000" value={shares} onChange={e => setShares(e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="divider" />
-
-          <div className="step-block">
-            <span className="step-num">04</span>
             <span className="step-label">國家 / 地區</span>
             <select className="field" value={country} onChange={e => setCountry(e.target.value)}>
               <option value="">— 請選擇 —</option>
@@ -829,12 +896,12 @@ export default function Home() {
           <div className="divider" />
 
           <div className="step-block">
-            <span className="step-num">05</span>
+            <span className="step-num">04</span>
             <span className="step-label">內容類型</span>
             <div className="chips">
-              {['reel', 'blog', 'social'].map(t => (
+              {['reel'].map(t => (
                 <button key={t} className={`chip${selectedType === t ? ' sel' : ''}`} onClick={() => setSelectedType(t)}>
-                  {t === 'reel' ? 'IG 短片' : t === 'blog' ? '文章' : '社交貼文'}
+                  IG 短片
                 </button>
               ))}
             </div>
@@ -857,7 +924,7 @@ export default function Home() {
 
           <div className="sidebar-footer-card">
             <div className="sidebar-footer-eyebrow">當前進度</div>
-            <div className="sidebar-footer-number">{pendingFields}/6</div>
+            <div className="sidebar-footer-number">{pendingFields}/3</div>
             <div className="sidebar-footer-copy">已填寫欄位愈完整，AI 生成結果愈穩定。</div>
           </div>
         </aside>
@@ -884,9 +951,6 @@ export default function Home() {
               >
                 發掘題材
               </button>
-              <button className="ghost-top-btn" onClick={()=>setShowWorldMap(v=>!v)}>
-                {showWorldMap ? '收起地圖' : '打開地圖'}
-              </button>
               <button className="primary-top-btn" onClick={() => setInputPanelOpen(true)} type="button">
                 新增想法
               </button>
@@ -901,31 +965,19 @@ export default function Home() {
                   <input className="search-field" placeholder="搜尋題目、主題、標籤…" value={search} onChange={e => setSearch(e.target.value)} />
                   <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
                     <option value="date">最新優先</option>
-                    <option value="viral">熱度參考</option>
-                    <option value="views">觀看最多</option>
                   </select>
                 </div>
               </section>
-
-              {showWorldMap && filtered.length > 0 && (
-                <div className="map-panel">
-                  <iframe
-                    src={`https://www.google.com/maps/embed/v1/search?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(filtered.filter((i:any)=>i.lat&&i.lng).length > 0 ? filtered.filter((i:any)=>i.lat&&i.lng).map((i:any)=>i.title).slice(0,5).join("|") : filtered.map((i:any)=>i.title).slice(0,3).join("|"))}`}
-                    width="100%" height="320" style={{border:0,display:"block"}} allowFullScreen
-                  />
-                </div>
-              )}
-
               <div className="filter-strip">
-                {['all', 'reel', 'blog', 'social'].map(f => (
+                {['all', 'reel'].map(f => (
                   <button key={f} className={`filter-btn${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
-                    {f === 'all' ? '全部' : f === 'reel' ? 'IG 短片' : f === 'blog' ? '文章' : '社交貼文'}
+                    {f === 'all' ? '全部' : 'IG 短片'}
                   </button>
                 ))}
-                <span className="filter-divider" />
-                {['HK', 'TW', 'JP', 'KR', 'US'].map(c => (
-                  <button key={c} className={`filter-btn${filter === 'country-' + c ? ' active' : ''}`} onClick={() => setFilter('country-' + c)}>
-                    {COUNTRIES[c].split(' ')[0]} {c}
+                {ideaBoards.length > 0 && <span className="filter-divider" />}
+                {ideaBoards.map(board => (
+                  <button key={board} className={`filter-btn${filter === 'board-' + board ? ' active' : ''}`} onClick={() => setFilter('board-' + board)}>
+                    {board}
                   </button>
                 ))}
               </div>
@@ -945,14 +997,12 @@ export default function Home() {
                 <div className="list-wrap">
                   <div className="list-head">
                     <div>題材</div>
-                    <div>熱度參考</div>
                     <div>操作</div>
                   </div>
                   <div className="idea-list">
                     {filtered.map(idea => {
-                      const vs = idea.viralScore || 0;
-                      const viralColor = vs >= 70 ? 'var(--accent)' : vs >= 40 ? 'var(--soon-success)' : 'var(--soon-purple-light)';
-                      const platform = inferPlatformFromUrl(idea.url || '');
+                      const referenceUrl = idea.sourceUrl || idea.url || idea.videoUrl || '';
+                      const platform = inferPlatformFromUrl(referenceUrl);
                       return (
                         <div key={idea.id} className="idea-row-group">
                           <div className="idea-row">
@@ -1002,22 +1052,20 @@ export default function Home() {
                                       {PLATFORM_META[platform]?.emoji || '🌐'} {PLATFORM_META[platform]?.label || platform}
                                     </span>
                                   )}
+                                  {referenceUrl && (
+                                    <a className="source-link-chip" href={referenceUrl} target="_blank" rel="noopener">
+                                      IG Reel link
+                                    </a>
+                                  )}
                                   <span className={`badge ${typeBadge[idea.type] || 'badge-reel'}`}>{typeLabel[idea.type] || idea.type}</span>
                                   {idea.country && <span className="badge badge-country">{COUNTRIES[idea.country] || idea.country}</span>}
                                   {idea.tags?.slice(0, 3).map((t: string) => <span key={t} className="tag">{t}</span>)}
                                 </div>
                               </div>
                             </div>
-
-                            <div className="idea-score-cell">
-                              <div className="score-number">{vs}</div>
-                              <div className="viral-row compact">
-                                <div className="viral-bar"><div className="viral-fill" style={{ width: vs + '%', background: viralColor }} /></div>
-                              </div>
-                            </div>
-
                             <div className="idea-actions">
                               <button className="btn-script btn-script-meta" type="button" onClick={() => handlePushToScript(idea)}>推上劇本生產線</button>
+                              <button className="btn-script btn-script-meta btn-cold-tell" type="button" onClick={() => handlePushToColdTell(idea)}>推上冷敘事</button>
                               <button onClick={()=>setDetailIdeaId(idea.id)} className="row-action-btn">
                                 詳情
                               </button>
@@ -1079,10 +1127,6 @@ export default function Home() {
                               <span className="explore-tag" key={tag}>{tag}</span>
                             ))}
                           </div>
-                        </div>
-                        <div className="explore-score">
-                          <span>{dir.region || '通用'}</span>
-                          <strong>{dir.viral_potential || 0}</strong>
                         </div>
                       </div>
                       <div className="explore-videos">
@@ -1162,33 +1206,14 @@ export default function Home() {
                   {savingNote === detailIdea.id ? '儲存中...' : notes[detailIdea.id] !== undefined ? '✓ 已儲存' : ''}
                 </div>
               </div>
-
-              <div className="detail-section">
-                <div className="rail-eyebrow">數據</div>
-                <div className="detail-metrics">
-                  <div className="metric-box">
-                    <div className="metric-value">{fmtNum(detailIdea.views || 0)}</div>
-                    <div className="metric-key">觀看</div>
-                  </div>
-                  <div className="metric-box">
-                    <div className="metric-value">{fmtNum(detailIdea.likes || 0)}</div>
-                    <div className="metric-key">讚好</div>
-                  </div>
-                  <div className="metric-box">
-                    <div className="metric-value">{fmtNum(detailIdea.shares || 0)}</div>
-                    <div className="metric-key">收藏</div>
-                  </div>
-                </div>
-              </div>
-
               <div className="detail-section">
                 <div className="rail-eyebrow">參考影片</div>
-                {detailIdea.url ? (
+                {(detailIdea.sourceUrl || detailIdea.url || detailIdea.videoUrl) ? (
                   <div className="detail-link-group">
-                    <a className="video-link-btn" href={detailIdea.url} target="_blank" rel="noopener">
-                      {PLATFORM_META[inferPlatformFromUrl(detailIdea.url)]?.label || '影片'} →
+                    <a className="video-link-btn" href={detailIdea.sourceUrl || detailIdea.url || detailIdea.videoUrl} target="_blank" rel="noopener">
+                      {PLATFORM_META[inferPlatformFromUrl(detailIdea.sourceUrl || detailIdea.url || detailIdea.videoUrl)]?.label || '影片'} →
                     </a>
-                    <a className="card-source" href={detailIdea.url} target="_blank" rel="noopener">{hostOf(detailIdea.url)}</a>
+                    <a className="card-source" href={detailIdea.sourceUrl || detailIdea.url || detailIdea.videoUrl} target="_blank" rel="noopener">{hostOf(detailIdea.sourceUrl || detailIdea.url || detailIdea.videoUrl)}</a>
                     <span className="card-date">{new Date(detailIdea.date).toLocaleDateString('zh-HK', { month: 'short', day: 'numeric' })}</span>
                   </div>
                 ) : (
@@ -1234,7 +1259,6 @@ body{background:var(--soon-bg-gradient);color:var(--text-primary);font-family:va
 .detail-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
 .detail-section{display:grid;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border-subtle)}
 .detail-section:last-child{border-bottom:0;padding-bottom:0}
-.detail-metrics{display:grid;grid-template-columns:1fr;gap:8px}
 .detail-link-group{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .ai-detail-btn{width:100%;padding:10px;margin-top:12px;background:var(--soon-btn-primary-bg);color:var(--soon-btn-primary-text);border:0;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)}
 .ai-detail-btn.generated{background:transparent;color:var(--text-secondary);border:1px solid var(--border-subtle)}
@@ -1259,8 +1283,6 @@ body{background:var(--soon-bg-gradient);color:var(--text-primary);font-family:va
 .explore-card-hook{font-size:12px;color:var(--accent);margin-top:8px}
 .explore-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .explore-tag{font-size:10px;padding:4px 9px;background:var(--tag-bg);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-secondary)}
-.explore-score{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:70px;color:var(--accent);font-size:11px;font-weight:600}
-.explore-score strong{font-size:24px;line-height:1}
 .explore-videos{border-top:1px solid var(--border-subtle);margin-top:16px;padding-top:16px}
 .explore-video-label{font-size:12px;color:var(--text-muted);margin-bottom:10px}
 .youtube-grid{display:flex;gap:10px}
@@ -1350,12 +1372,12 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .sort-select{padding:9px 32px 9px 12px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius);color:var(--text-secondary);font-family:var(--sans);font-size:11px;font-weight:400;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239090a8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 .map-panel{margin-bottom:4px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-subtle)}
 .list-wrap{border:1px solid var(--border-subtle);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-card)}
-.list-head{display:grid;grid-template-columns:minmax(0,1fr) 160px 220px;gap:12px;padding:12px 16px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)}
+.list-head{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;padding:12px 16px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)}
 .list-head > div:last-child{text-align:right}
 .idea-list{display:flex;flex-direction:column}
 .idea-row-group{border-bottom:1px solid var(--border-subtle)}
 .idea-row-group:last-child{border-bottom:none}
-.idea-row{display:grid;grid-template-columns:minmax(0,1fr) 160px 220px;gap:12px;padding:16px;background:transparent;align-items:center}
+.idea-row{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;padding:16px;background:transparent;align-items:center}
 .idea-row:hover{background:var(--bg-card-hover)}
 .idea-main{display:flex;align-items:flex-start;gap:14px;min-width:0}
 .idea-main-copy{min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -1379,6 +1401,8 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .idea-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .idea-actions .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:var(--soon-btn-primary-bg);border:1px solid var(--soon-btn-primary-border);color:var(--soon-btn-primary-text);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
 .idea-actions .row-action-btn:hover{background:var(--soon-link);border-color:var(--soon-link);color:var(--soon-btn-primary-text)}
+.idea-actions .btn-cold-tell{border-color:rgba(125,211,252,0.38);background:rgba(14,165,233,0.14);color:#bae6fd}
+.idea-actions .btn-cold-tell:hover{border-color:#7dd3fc;background:rgba(14,165,233,0.24);color:#fff}
 .title-edit-actions .row-action-btn{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:7px 11px;background:transparent;border:1px solid var(--border-default);color:var(--text-secondary);border-radius:var(--radius);cursor:pointer;font-family:var(--sans)}
 .title-edit-actions .row-action-btn:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 .row-delete{padding:7px 9px;border:1px solid rgba(255,255,255,0.14)}
@@ -1392,6 +1416,8 @@ select.field{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg widt
 .empty-sub{font-size:13px}
 .badge{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid currentColor;opacity:0.9}
 .badge-reel{color:var(--soon-link)}.badge-blog{color:var(--soon-success-text)}.badge-social{color:var(--soon-pending-text)}.badge-country{color:var(--text-secondary);border-color:var(--border-subtle);background:var(--bg-card)}
+.source-link-chip{display:inline-flex;align-items:center;padding:4px 9px;border:1px solid var(--border-subtle);border-radius:999px;background:var(--bg-card);color:var(--soon-link);font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;text-decoration:none}
+.source-link-chip:hover{background:var(--soon-link);border-color:var(--soon-link);color:var(--soon-btn-primary-text)}
 .card-delete{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:2px;transition:color 0.15s;flex-shrink:0}
 .card-delete:hover{color:var(--text)}
 .viral-row{display:flex;align-items:center;gap:10px}
