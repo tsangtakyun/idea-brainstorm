@@ -1,5 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { ANTHROPIC_MODEL } from '@/lib/anthropicModel'
+import { geocodeAddress } from '@/lib/geocoding'
+import { authorizeGeocoding, readSmallJson, validPlaceText } from '@/lib/geocoding-access'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -9,30 +12,21 @@ function stripCiteTags(text: string): string {
     .trim()
 }
 
-async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.GOOGLE_MAPS_API_KEY}`
-    const res = await fetch(url)
-    const data = await res.json()
-    if (data.status === 'OK' && data.results[0]) {
-      const { lat, lng } = data.results[0].geometry.location
-      return { lat, lng }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
 export async function POST(req: NextRequest) {
+  let body: Record<string, unknown>
+  try { body = await readSmallJson(req) }
+  catch { return NextResponse.json({ error: 'Invalid request' }, { status: 400 }) }
+  const { name, address = '' } = body
+  if (!validPlaceText(name) || !validPlaceText(address, false)) {
+    return NextResponse.json({ error: 'Invalid place' }, { status: 400 })
+  }
+  const denied = await authorizeGeocoding(req)
+  if (denied) return denied
   try {
-    const { name, address } = await req.json()
-    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 })
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: ANTHROPIC_MODEL,
       max_tokens: 1000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any,
       messages: [{
         role: 'user',
         content: `搜尋「${name}」${address ? `（地址：${address}）` : ''}嘅資料，然後用繁體中文廣東話寫一段2-3句嘅背景介紹，包括：店鋪特色、主打產品／服務、受歡迎程度、任何有趣嘅賣點。\n\n重要：只返回純 JSON，desc 入面唔好有任何 HTML tags：\n{\n  "desc": "背景介紹純文字..."\n}`
@@ -51,7 +45,7 @@ export async function POST(req: NextRequest) {
     const cleanDesc = stripCiteTags(parsed.desc || '')
 
     const geoQuery = address ? `${name} ${address}` : name
-    const coords = await geocode(geoQuery)
+    const coords = await geocodeAddress(geoQuery).catch(() => null)
 
     return NextResponse.json({
       desc: cleanDesc,
@@ -59,6 +53,6 @@ export async function POST(req: NextRequest) {
       lng: coords?.lng ?? null,
     })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Place search temporarily unavailable' }, { status: 503 })
   }
 }

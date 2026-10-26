@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { ANTHROPIC_MODEL } from '@/lib/anthropicModel'
 import { fetchLinkMetadata, normalizeLinkMetadataUrl } from '@/lib/linkMetadata'
 import { resolveSocialVideo } from '@/lib/socialVideoResolver'
 
@@ -52,12 +53,28 @@ function normalizeSharedCaption(value: unknown) {
   return text.slice(0, 4000)
 }
 
+function isWeakSocialDescription(value: string) {
+  const text = value.trim()
+  if (!text) return true
+  if (/^Photo by .+ on \w+ \d{1,2}, \d{4}\.?$/i.test(text)) return true
+  if (/^Video by .+ on \w+ \d{1,2}, \d{4}\./i.test(text)) return true
+  if (/^Video by .+可能是/i.test(text)) return true
+  if (/^.+(?:on|在) Instagram:?\s*$/i.test(text)) return true
+  return false
+}
+
 function isGenericSocialTitle(value: string) {
   const text = value.trim().toLowerCase()
   return !text ||
     text === 'instagram' ||
     text === 'instagram reel' ||
     text === 'instagram reels' ||
+    text === 'login • instagram' ||
+    text === 'log in • instagram' ||
+    text === '登入 • instagram' ||
+    text === '登入・instagram' ||
+    text.includes('login') && text.includes('instagram') ||
+    text.includes('登入') && text.includes('instagram') ||
     text === 'tiktok' ||
     text === 'xiaohongshu'
 }
@@ -142,11 +159,38 @@ async function fetchMetadata(url: string) {
   }
 }
 
+async function fetchImageForVision(url: string) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      },
+      cache: 'no-store',
+    })
+    if (!response.ok) return null
+
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || 'image/jpeg'
+    const supportedTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    const mediaType = supportedTypes.has(contentType) ? contentType : 'image/jpeg'
+    const buffer = Buffer.from(await response.arrayBuffer())
+    if (buffer.length === 0 || buffer.length > 4_500_000) return null
+
+    return {
+      mediaType,
+      data: buffer.toString('base64'),
+    }
+  } catch {
+    return null
+  }
+}
+
 async function inferFields(params: {
   url: string
   platform: string
   title: string
   description: string
+  image?: string
 }) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return null
@@ -182,16 +226,35 @@ Important distinction:
 If there is a restaurant, cafe, shop, venue, brand, hotel, attraction, or event:
 - placeName must be the official name from the caption when possible, not just "Instagram".
 - placeAddress should copy only the most precise street address found in the caption. Do not invent an address.
-- shopHighlights should say what the place is famous for or what viewers should try. Prefer facts from caption/metadata; if placeName is specific enough, use web search to verify signature dishes/items. Do not invent details if uncertain.
+- shopHighlights should say what the place is famous for or what viewers should try. Prefer facts from caption/metadata/image text. Do not invent details if uncertain.
 - desc should summarize the actual content in Traditional Chinese for a Hong Kong creator, not say metadata is missing if the description contains caption text.
-- tags should describe the content and location, using short lowercase tags.`
+- tags should describe the content and location, using short lowercase tags.
+
+Critical Instagram rule:
+- Ignore creator names, account names, profile names, "Photo by ..." text, follower UI, and generic personal-brand metadata unless the actual caption/image is only about personal branding.
+- If the image text or hashtags mention food, shops, travel, places, menu items, prices, or locations, the ideaTitle and desc must be about that subject, not the creator.
+- For OCR-like image text, treat large overlay text and visible caption/location text as primary evidence.`
+
+  const content: any[] = [{ type: 'text', text: user }]
+  if (params.image) {
+    const imagePayload = await fetchImageForVision(params.image)
+    if (imagePayload) {
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: imagePayload.mediaType,
+          data: imagePayload.data,
+        },
+      })
+    }
+  }
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: ANTHROPIC_MODEL,
     max_tokens: 850,
-    tools: [{ type: 'web_search_20250305', name: 'web_search' } as any],
     system,
-    messages: [{ role: 'user', content: user }],
+    messages: [{ role: 'user', content }],
   })
 
   const text = response.content.find(block => block.type === 'text')
@@ -239,6 +302,12 @@ export async function POST(req: NextRequest) {
     const video = resolved?.videoUrl || metadata?.video || ''
     const metadataBlocked = metadata?.metadataBlocked ?? (!rawTitle && !description && !image)
     const effectiveMetadataBlocked = metadataBlocked && !sharedCaption
+    const shouldUseImageAnalysis = Boolean(image) && (
+      !description ||
+      isWeakSocialDescription(description) ||
+      isGenericSocialTitle(title) ||
+      /personal|creator|lifestyle|bernice/i.test(title)
+    )
 
     const aiFields = effectiveMetadataBlocked
       ? null
@@ -247,6 +316,7 @@ export async function POST(req: NextRequest) {
           platform,
           title,
           description,
+          image: shouldUseImageAnalysis ? image : undefined,
         })
 
     const fallbackTags = platform === 'instagram' || platform === 'tiktok' || platform === 'xiaohongshu'
@@ -273,7 +343,7 @@ export async function POST(req: NextRequest) {
       hls_url: video,
       thumbnail: image,
       thumbnail_url: image,
-      title: aiFields?.ideaTitle || aiFields?.placeName || title || (isGenericSocialTitle(rawTitle) ? '' : rawTitle),
+      title: aiFields?.ideaTitle || aiFields?.placeName || (isGenericSocialTitle(title) ? '' : title) || (isGenericSocialTitle(rawTitle) ? '' : rawTitle),
       caption: sharedCaption || metadata?.caption || '',
       metadataDescription: description,
       metadataBlocked: effectiveMetadataBlocked,

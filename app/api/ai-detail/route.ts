@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { ANTHROPIC_MODEL } from '@/lib/anthropicModel'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -14,9 +15,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: ANTHROPIC_MODEL,
       max_tokens: 1500,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' } as any],
       messages: [{
         role: 'user',
         content: `你係一個 IG Reel 題材研究員。

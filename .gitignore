@@ -3,3 +3,6 @@
 node_modules/
 .npm-cache/
 next-env.d.ts
+
+# backup 2026-10-26: macOS
+.DS_Store

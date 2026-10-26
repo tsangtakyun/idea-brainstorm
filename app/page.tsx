@@ -574,12 +574,16 @@ export default function Home() {
       let finalLng = placeLng
       if (!finalLat && !finalLng && (placeName || analysis.title)) {
         try {
-          const geoQuery = encodeURIComponent([placeName, placeAddress, COUNTRIES[country] || country].filter(Boolean).join(' '))
-          const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${geoQuery}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`)
+          const address = [placeName, placeAddress, COUNTRIES[country] || country].filter(Boolean).join(' ')
+          const geoRes = await fetch('/api/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address }),
+          })
           const geoData = await geoRes.json()
-          if (geoData.status === 'OK' && geoData.results[0]) {
-            finalLat = geoData.results[0].geometry.location.lat
-            finalLng = geoData.results[0].geometry.location.lng
+          if (geoRes.ok && geoData.location) {
+            finalLat = geoData.location.lat
+            finalLng = geoData.location.lng
           }
         } catch (e) { /* silent fail */ }
       }

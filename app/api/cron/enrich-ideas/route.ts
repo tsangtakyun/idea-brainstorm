@@ -4,6 +4,7 @@ import { createAdminSupabase } from '@/lib/admin-supabase'
 
 type PendingIdea = {
   id: string
+  title?: string | null
   url?: string | null
   source_url?: string | null
   categories?: string[] | null
@@ -24,6 +25,7 @@ function firstString(...values: unknown[]) {
 function pendingTags(tags: string[] | null | undefined, fallback: string[]) {
   const next = Array.from(new Set([...(tags ?? []), ...fallback].filter(Boolean)))
     .filter((tag) => tag !== '待分析')
+    .filter((tag) => tag !== '補資料失敗')
   return next.length > 0 ? next : ['instagram']
 }
 
@@ -130,10 +132,10 @@ async function handleCron(request: NextRequest) {
     return NextResponse.json({ error: 'Supabase admin 未設定' }, { status: 500 })
   }
 
-  const { data, error } = await supabase
+  const { data: pendingData, error } = await supabase
     .from('ideas')
-    .select('id,url,source_url,categories,tags')
-    .contains('tags', ['待分析'])
+    .select('id,title,url,source_url,categories,tags')
+    .or('tags.cs.{待分析},tags.cs.{補資料失敗}')
     .order('created_at', { ascending: true })
     .limit(12)
 
@@ -141,9 +143,63 @@ async function handleCron(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  const { data: loginData, error: loginError } = await supabase
+    .from('ideas')
+    .select('id,title,url,source_url,categories,tags')
+    .in('title', ['登入 • Instagram', '登入・Instagram', 'Login • Instagram', 'Log in • Instagram'])
+    .order('created_at', { ascending: true })
+    .limit(12)
+
+  if (loginError) {
+    return NextResponse.json({ error: loginError.message }, { status: 500 })
+  }
+
+  const { data: pollutedData, error: pollutedError } = await supabase
+    .from('ideas')
+    .select('id,title,url,source_url,categories,tags')
+    .ilike('title', '%Bernice%')
+    .order('created_at', { ascending: true })
+    .limit(12)
+
+  if (pollutedError) {
+    return NextResponse.json({ error: pollutedError.message }, { status: 500 })
+  }
+
+  let staleThumbData: PendingIdea[] = []
+  if (request.nextUrl.searchParams.get('refreshThumbs') === '1') {
+    const ids = request.nextUrl.searchParams.get('ids')
+      ?.split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+
+    let staleThumbQuery = supabase
+      .from('ideas')
+      .select('id,title,url,source_url,categories,tags')
+
+    staleThumbQuery = ids && ids.length > 0
+      ? staleThumbQuery.in('id', ids)
+      : staleThumbQuery.ilike('thumb', '%scontent%').order('created_at', { ascending: false }).limit(12)
+
+    const { data, error: staleThumbError } = await staleThumbQuery
+
+    if (staleThumbError) {
+      return NextResponse.json({ error: staleThumbError.message }, { status: 500 })
+    }
+    staleThumbData = (data ?? []) as PendingIdea[]
+  }
+
+  const seen = new Set<string>()
+  const ideas = ([...(pendingData ?? []), ...(loginData ?? []), ...(pollutedData ?? []), ...staleThumbData] as PendingIdea[])
+    .filter((idea) => {
+      if (seen.has(idea.id)) return false
+      seen.add(idea.id)
+      return true
+    })
+    .slice(0, 12)
+
   const origin = request.nextUrl.origin
   const results = []
-  for (const idea of (data ?? []) as PendingIdea[]) {
+  for (const idea of ideas) {
     try {
       results.push(await enrichOne(origin, idea))
     } catch (err) {
@@ -155,7 +211,7 @@ async function handleCron(request: NextRequest) {
   }
 
   return NextResponse.json({
-    checked: data?.length ?? 0,
+    checked: ideas.length,
     results,
   })
 }
